@@ -15,7 +15,9 @@ def test_health_check():
     """Prueba que el servidor encienda y el endpoint de salud responda 200 OK."""
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "message": "PROFECO AI Optimizer API is running"}
+    data = response.json()
+    assert data["status"] == "ok"
+    assert "mongodb_connected" in data
 
 def test_frontend_serve():
     """Prueba que el Frontend estático se está sirviendo correctamente."""
