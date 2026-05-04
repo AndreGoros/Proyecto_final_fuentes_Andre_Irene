@@ -17,6 +17,7 @@ class ProductItem(BaseModel):
 class StoreResult(BaseModel):
     cadena: str
     sucursal: str
+    direccion: str
     distancia_km: float
     productos_encontrados: List[ProductItem]
     productos_no_encontrados: List[str]

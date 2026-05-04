@@ -73,7 +73,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentInputMode === 'texto') {
             const texto = document.getElementById('lista-texto').value;
             if (!texto) { alert('Escribe algunos productos.'); return; }
-            const productos = texto.split(',').map(p => p.trim()).filter(p => p);
+            // Permitir que la lista venga separada por comas O por saltos de línea
+            const productos = texto.split(/,|\n/).map(p => p.trim()).filter(p => p);
             endpoint = '/api/v1/optimizar-carrito';
             options = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ubicacion_usuario: { latitud: userLat, longitud: userLon }, productos }) };
         } else {
@@ -118,9 +119,12 @@ document.addEventListener('DOMContentLoaded', () => {
             card.innerHTML = `
                 <div class="store-info">
                     <h3><i class="fa-solid ${icon}"></i> ${res.cadena}</h3>
-                    <div class="store-details">
+                    <div class="store-details" style="font-weight: 600;">
                         <span><i class="fa-solid fa-map-location-dot"></i> ${res.sucursal}</span>
                         <span><i class="fa-solid fa-road"></i> ${res.distancia_km} km</span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.2rem; margin-bottom: 0.5rem; text-transform: capitalize;">
+                        <i class="fa-solid fa-location-dot"></i> ${res.direccion}
                     </div>
                     <div class="store-details" style="margin-top:0.5rem; color:#4ade80;">
                         <i class="fa-solid fa-check"></i> ${res.productos_encontrados.length} prod.

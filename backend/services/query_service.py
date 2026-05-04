@@ -32,6 +32,7 @@ async def optimizar_carrito(latitud: float, longitud: float, productos: List[str
                 "_id": "$location.coordinates",              # Coordenada exacta = Sucursal única
                 "cadena":       {"$first": "$cadena"},
                 "sucursal":     {"$first": "$cadena_raw"},
+                "direccion":    {"$first": "$direccion"},
                 "distancia_mts":{"$first": "$distancia"},
             }
         },
@@ -81,9 +82,15 @@ async def optimizar_carrito(latitud: float, longitud: float, productos: List[str
 
         # Solo incluir sucursales donde se encontró al menos 1 producto
         if productos_encontrados:
+            # Manejar el caso donde direccion pueda ser nulo si son datos viejos
+            dir_str = suc.get("direccion")
+            if not dir_str or str(dir_str).lower() == "nan":
+                dir_str = "Dirección no disponible"
+
             resultados_finales.append({
                 "cadena":               suc["cadena"],
                 "sucursal":             suc["sucursal"],
+                "direccion":            dir_str,
                 "distancia_km":         round(distancia_km, 2),
                 "productos_encontrados":productos_encontrados,
                 "productos_no_encontrados": productos_no_encontrados,

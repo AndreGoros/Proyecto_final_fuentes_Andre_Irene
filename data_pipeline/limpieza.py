@@ -75,8 +75,8 @@ CADENAS_PERMITIDAS: dict[str, str] = {
  
 # Columnas que se descartan (ruido) — nombres reales del CSV
 COLUMNAS_DESCARTADAS: list[str] = [
-    # columnas de ubicación textual (ya tenemos lat/lon)
-    "giro", "municipio", "estado", "direccion", "nombre_comercial",
+    # columnas de ubicación textual (ya tenemos lat/lon, pero el usuario pidió conservar direccion)
+    "giro", "municipio", "estado", "nombre_comercial",
     # columnas de catálogo / presentación (muy específicas, no útiles para Gemini)
     "catalogo", "presentacion",
     # columnas legacy / alternativas
@@ -93,12 +93,14 @@ COLUMNAS_MAP: dict[str, str] = {
     "precio":           "Precio",
     "latitud":          "LATITUD",
     "longitud":         "LONGITUD",
+    "direccion":        "direccion",
     # Formato original previsto (mayúsculas) — por compatibilidad
     "Cadena":           "Cadena",
     "Producto":         "Producto",
     "Precio":           "Precio",
     "LATITUD":          "LATITUD",
     "LONGITUD":         "LONGITUD",
+    "Direccion":        "direccion",
 }
  
 # Columnas que DEBEN existir en el CSV (mínimo), en forma interna
