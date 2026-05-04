@@ -15,6 +15,35 @@ Actualmente, el proyecto es **100% funcional de extremo a extremo (End-to-End)**
 
 ---
 
+## 🛠️ Stack Tecnológico y Herramientas
+
+Este proyecto hace uso de tecnologías modernas para asegurar rendimiento, escalabilidad y una experiencia de usuario fluida.
+
+### Backend y Core Logic
+* **FastAPI**: Framework web moderno y de alto rendimiento para construir APIs con Python, basado en validación de tipos. Ideal para manejar peticiones asíncronas.
+* **Python 3**: Lenguaje principal del proyecto.
+* **Pydantic**: Validación de datos y gestión de esquemas, asegurando que los *payloads* de la API sean estrictamente correctos.
+
+### Base de Datos y Procesamiento Geoespacial
+* **MongoDB**: Base de datos NoSQL elegida por su flexibilidad con documentos y sus excelentes capacidades nativas para índices geoespaciales (`2dsphere`).
+* **Motor**: Driver oficial asíncrono de MongoDB para Python, que maximiza el throughput del servidor FastAPI.
+* **Pandas**: Utilizado en el pipeline ETL para ingestar, limpiar, transformar y procesar eficientemente los pesados archivos CSV de PROFECO.
+
+### Inteligencia Artificial
+* **Google Gemini (Vision)**: Integrado para el análisis inteligente de fotografías de listas de compras. Realiza OCR y extracción estructurada de datos, infiriendo productos, marcas y gramajes mediante prompting avanzado.
+
+### Frontend (UI/UX)
+* **HTML5, CSS3 y Vanilla JavaScript**: Aplicación web ligera construida sin frameworks complejos, garantizando tiempos de carga rápidos y un rendimiento fluido.
+* **Diseño Premium**: Interfaz moderna aplicando tendencias de diseño como *Glassmorphism*, transiciones suaves y modo oscuro (*Dark Mode*) nativo.
+
+### DevOps, Pruebas e Infraestructura
+* **Docker & Docker Compose**: Contenerización de la base de datos (y su panel Mongo-Express) para garantizar un entorno determinista de desarrollo.
+* **GitHub Actions**: Pipeline de Integración Continua (CI) que valida la integridad del código y ejecuta las pruebas automáticas.
+* **Pytest**: Framework utilizado para diseñar pruebas unitarias automatizadas que protegen la lógica de los endpoints y los scripts de limpieza.
+* **Ngrok**: Túnel reverso automatizado en el proyecto para poder exponer el servidor local a internet y probar la aplicación en dispositivos móviles fácilmente.
+
+---
+
 ## 📂 Organización del Repositorio
 
 El proyecto ha sido rediseñado utilizando arquitectura de microservicios y una estricta separación por responsabilidades.
