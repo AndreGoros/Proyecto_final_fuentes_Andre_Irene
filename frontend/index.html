@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ahorro PROFECO | Optimiza tu súper</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1><i class="fa-solid fa-basket-shopping"></i> Ahorro PROFECO</h1>
+            <p>Encuentra el súper más barato, considerando tu viaje 🚗</p>
+        </header>
+
+        <main class="glass-panel">
+            <div class="location-section">
+                <button id="btn-location" class="btn-secondary">
+                    <i class="fa-solid fa-location-crosshairs"></i> Obtener mi ubicación
+                </button>
+                <span id="location-status" class="status-text">📍 Ubicación pendiente...</span>
+            </div>
+
+            <div class="tabs">
+                <button class="tab-btn active" data-target="tab-texto"><i class="fa-solid fa-pen-to-square"></i> Escribir Lista</button>
+                <button class="tab-btn" data-target="tab-foto"><i class="fa-solid fa-camera"></i> Subir Foto</button>
+            </div>
+
+            <div class="tab-content active" id="tab-texto">
+                <p class="instruction">Escribe los productos separados por comas:</p>
+                <textarea id="lista-texto" placeholder="Ej. leche lala deslactosada 1l, pan bimbo blanco, huevo san juan 18 piezas..."></textarea>
+            </div>
+
+            <div class="tab-content" id="tab-foto">
+                <p class="instruction">Sube una foto de tu lista de compras del refri:</p>
+                <div class="file-upload">
+                    <input type="file" id="foto-input" accept="image/*" hidden>
+                    <label for="foto-input" class="upload-area">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <span>Haz clic o arrastra tu foto aquí</span>
+                    </label>
+                    <p id="file-name" class="file-name"></p>
+                </div>
+            </div>
+
+            <button id="btn-calcular" class="btn-primary">
+                <i class="fa-solid fa-calculator"></i> Calcular Mejor Opción
+            </button>
+        </main>
+
+        <section id="results-section" class="results-section hidden">
+            <h2>🏆 Resultados</h2>
+            <div id="results-container" class="results-grid">
+                <!-- Cards generadas por JS -->
+            </div>
+        </section>
+        
+        <!-- Loading -->
+        <div id="loading-overlay" class="hidden">
+            <div class="spinner"></div>
+            <p>Optimizando ruta y precios...</p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

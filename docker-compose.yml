@@ -1,0 +1,48 @@
+services:
+
+  mongodb:
+    image: mongo:7.0
+    container_name: precios_mongo
+    restart: unless-stopped
+
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin1234          # ← cambia en producción
+      MONGO_INITDB_DATABASE: precios_db
+
+    ports:
+      - "27017:27017"
+
+    volumes:
+      - mongo_data:/data/db                          # datos persistentes
+      - ./mongo-init:/docker-entrypoint-initdb.d:ro  # scripts de inicialización
+
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ── Mongo Express (UI web opcional) ──────────────────────────────────────
+  mongo-express:
+    image: mongo-express:1.0
+    container_name: precios_mongo_ui
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: admin1234
+      ME_CONFIG_MONGODB_SERVER: mongodb
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: admin1234
+
+    ports:
+      - "8081:8081"
+
+volumes:
+  mongo_data:
+    driver: local
