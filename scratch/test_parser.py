@@ -1,33 +1,39 @@
+import re
 
-import sys
-import os
+UNIDADES_IGNORAR = {
+    "latas", "lata", "piezas", "pz", "kg", "kilos", "kilo", "litros", "litro", 
+    "paquete", "pq", "cajas", "caja", "bolsa", "frasco", "botes", "bote"
+}
 
-# Añadir el directorio backend al path para poder importar
-sys.path.append(os.path.join(os.getcwd(), 'backend'))
-
-from services.query_service import parse_product_string
-
-def test_parser():
-    cases = [
-        ("6 litros leche lala entera", (6, "litros leche lala entera")),
-        ("2latas atun dolores", (2, "latas atun dolores")),
-        ("1kg frijoles la costeña", (1, "kg frijoles la costeña")), # 1 no es extraído si no hay espacio o x? No, 1kg -> 1, kg...
-        ("pan bimbo grande", (1, "pan bimbo grande")),
-        ("3 x huevos san juan", (3, "huevos san juan")),
-        ("12 piezas huevo", (12, "piezas huevo")),
-        ("leche", (1, "leche")),
-        ("6x yogurt", (6, "yogurt")),
-    ]
+def parse_product_string(prod_str: str):
+    prod_str = prod_str.strip().lower()
     
-    print("Testing parse_product_string (Updated):")
-    print("-" * 30)
-    for input_str, expected in cases:
-        result = parse_product_string(input_str)
-        status = "✅" if result == expected else "❌"
-        print(f"{status} Input: '{input_str}'")
-        print(f"   Expected: {expected}")
-        print(f"   Got:      {result}")
-    print("-" * 30)
+    cantidad = 1
+    match = re.match(r"^(\d+)\s*[xX*]?\s*(.*)$", prod_str)
+    if match:
+        try:
+            cantidad = int(match.group(1))
+            prod_str = match.group(2)
+        except ValueError:
+            pass
+            
+    palabras = prod_str.split()
+    filtradas = [p for p in palabras if p not in UNIDADES_IGNORAR]
+    
+    busqueda = " ".join(filtradas) if filtradas else prod_str
+    
+    return cantidad, busqueda
 
-if __name__ == "__main__":
-    test_parser()
+test_cases = [
+    "6 litros de leche lala",
+    "3 chocorroles",
+    "1 kg de papa",
+    "4 latas de atun"
+]
+
+for tc in test_cases:
+    qty, term = parse_product_string(tc)
+    palabras = [p for p in term.lower().split() if len(p) > 1]
+    regex_pattern = "".join([f"(?=.*{p})" for p in palabras]) + ".*"
+    print(f"Input: '{tc}' -> Qty: {qty}, Term: '{term}', Palabras: {palabras}")
+    print(f"  Regex: {regex_pattern}")

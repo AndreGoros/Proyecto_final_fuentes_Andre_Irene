@@ -1,81 +1,38 @@
+import unicodedata
+import re
 
-import asyncio
-from unittest.mock import MagicMock, AsyncMock
+def remove_accents(text: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFD", text) if unicodedata.category(c) != "Mn")
 
-# Mocking database before imports
-import sys
-import os
-sys.path.append(os.path.join(os.getcwd(), 'backend'))
+def parse_product_string(prod_str: str):
+    prod_str = remove_accents(prod_str.strip().lower())
+    # ... logic simplified ...
+    return prod_str
 
-import database
-database.db = MagicMock()
-database.db.precios = MagicMock()
-
-from services.query_service import optimizar_carrito
-
-async def run_test():
-    print("Simulando búsqueda con marcas reales de los CSV...")
-    print("-" * 50)
+def get_regex(termino_busqueda):
+    palabras_query = termino_busqueda.split()
+    palabras_flex = []
+    for p in palabras_query:
+        f = p.lower()
+        f = f.replace("b", "B").replace("v", "B")
+        f = f.replace("g", "G").replace("j", "G")
+        f = f.replace("s", "S").replace("z", "S").replace("c", "S")
+        f = f.replace("B", "[bv]").replace("G", "[gj]").replace("S", "[szc]")
+        f = f.replace("rr", "r").replace("r", "r+")
+        if not f.startswith("["): f = "h?" + f
+        palabras_flex.append(f)
     
-    # Mocking sucursales (Paso 1)
-    mock_sucursales = [
-        {
-            "_id": [-102.292976, 21.832072],
-            "cadena": "Walmart",
-            "sucursal": "WALMART SUPERCENTER AGUASCALIENTES",
-            "direccion": "Av. Mahatma Gandhi S/n",
-            "distancia_mts": 2000
-        }
-    ]
-    
-    cursor_geo = AsyncMock()
-    cursor_geo.to_list.return_value = mock_sucursales
-    database.db.precios.aggregate.return_value = cursor_geo
-    
-    # Mocking find_one (Paso 3) para diferentes productos
-    async def mock_find_one(query, sort=None):
-        regex = query["nombre_simplificado"]["$regex"]
-        print(f"🔍 Buscando en DB con regex: {regex}")
-        
-        if "aguascalientes" in regex:
-            return {
-                "producto": "LECHE ULTRAPASTEURIZADA ENTERA AGUASCALIENTES 1L",
-                "precio": 23.50
-            }
-        if "marinela" in regex and "chocoroles" in regex:
-            return {
-                "producto": "PASTELILLOS CHOCOROLES MARINELA 100G",
-                "precio": 17.00
-            }
-        if "huevo" in regex:
-            return {
-                "producto": "HUEVO BLANCO EL CALVARIO 18 PIEZAS",
-                "precio": 45.00
-            }
-        return None
+    distractores = ["harina", "bebida", "polvo", "galletas"]
+    avoid_regex = "".join([f"(?!.*{d})" for d in distractores if d not in termino_busqueda])
+    return avoid_regex + "".join([f"(?=.*{p})" for p in palabras_flex]) + ".*"
 
-    database.db.precios.find_one = mock_find_one
-    
-    # Caso 1: Con marcas y cantidades
-    productos_test = [
-        "6 litros leche aguascalientes",
-        "2 chocoroles marinela",
-        "huevo" # Genérico, debe traer el primero (mockeado como El Calvario)
-    ]
-    
-    print(f"Lista de prueba: {productos_test}")
-    resultados = await optimizar_carrito(21.83, -102.29, productos_test)
-    
-    for res in resultados:
-        print(f"\n🏪 Sucursal: {res['cadena']} ({res['sucursal']})")
-        print(f"   Distancia: {res['distancia_km']} km | Gasolina: ${res['costo_gasolina']}")
-        print(f"   --- Productos Encontrados ---")
-        for p in res['productos_encontrados']:
-            print(f"   ✅ {p['cantidad']}x {p['producto']}")
-            print(f"      Unit: ${p['precio_unitario']} | Total: ${p['precio_total']}")
-        print(f"   ---")
-        print(f"   💰 SUBTOTAL: ${res['subtotal_productos']}")
-        print(f"   🚀 TOTAL (inc. gas): ${res['total_viaje']}")
+# Test 'atún'
+input_val = "2 latas de atún"
+term = parse_product_string(input_val)
+regex = get_regex(term)
+db_val = "atun lata 140 gr"
+match = re.search(regex, db_val, re.IGNORECASE)
 
-if __name__ == "__main__":
-    asyncio.run(run_test())
+print(f"Term: {term}")
+print(f"Regex: {regex}")
+print(f"Match: {'YES' if match else 'NO'}")
