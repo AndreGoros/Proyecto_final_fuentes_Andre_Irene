@@ -100,12 +100,26 @@ Contiene los scripts locales que transforman el catálogo crudo en datos geoloca
  
 ### 3. `scratch/` (Laboratorio y Pruebas Rápidas)
 Carpeta utilizada para validar algoritmos de forma aislada antes de integrarlos al flujo principal.
-* **`test_parser.py`**: Prueba unitaria para el motor de expresiones regulares que extrae cantidades y unidades.
-* **`check_data.py`**: Script de inspección directa para verificar que los errores de escritura (como "Atén") se corrijan a "atun" en la base de datos.
-* **`test_real_db.py`**: Orquestador de simulaciones que valida la búsqueda geoespacial y el cálculo de precios usando datos reales cargados.
-* **`check_store.py`**: Permite listar todos los productos de una coordenada específica para validar la variedad del inventario.
-* **`count.py`**: Utilidad rápida para verificar el número total de registros e índices en MongoDB.
-* **`test_full_logic.py`**: Simulación completa del flujo de optimización utilizando objetos simulados (*mocks*) para pruebas sin base de datos activa.
+* **`check_data.py`**: Verifica la corrección de encoding y limpieza en DB.
+* **`check_db_items.py`**: Búsqueda manual de productos para depurar el catálogo.
+* **`check_mongo_geo.py`**: Valida que los índices `$geoNear` funcionen correctamente.
+* **`check_store.py`**: Lista el inventario completo de una sucursal específica.
+* **`count.py`**: Conteo rápido de documentos cargados por colección.
+* **`inspect_atun.py`**: Valida la corrección del error "Atén" -> "atun".
+* **`inspect_db.py`**: Muestra ejemplos aleatorios de documentos para inspección de esquema.
+* **`list_gemini_models.py`**: Consulta modelos disponibles en la API Key de Google.
+* **`test_clean_names.py`**: Valida la eliminación de ruidos y distractores en nombres.
+* **`test_full_logic.py`**: Prueba el flujo completo (IA -> Parser -> Búsqueda) con mocks.
+* **`test_full_regex.py`**: Valida patrones de búsqueda complejos y negativos.
+* **`test_gemini_api.py`**: Diagnóstico básico de conexión con Google Gemini.
+* **`test_gemini_api_v3.py`**: Prueba de cuotas y rendimiento del modelo Flash.
+* **`test_gemini_correction.py`**: Prueba aislada de la IA corrigiendo ortografía.
+* **`test_new_logic.py`**: Borrador de la lógica de tiendas completas/incompletas.
+* **`test_parser.py`**: Valida la extracción de cantidades (1kg, 2lt, etc).
+* **`test_phonetic_regex.py`**: Desarrollo de reglas de ortografía flexible (g/j, s/z).
+* **`test_phonetic_regex_fixed.py`**: Versión final corregida de la búsqueda fonética.
+* **`test_real_db.py`**: Simulación de búsqueda real contra los datos de PROFECO.
+* **`test_real_search.py`**: Validación de resultados por cercanía y disponibilidad real.
 
 ### 4. Infraestructura Docker & MongoDB
 * **`docker-compose.yml`** (En la raíz): Orquestador de contenedores que levanta el servidor de MongoDB y Mongo-Express (Interfaz Gráfica para la DB).
