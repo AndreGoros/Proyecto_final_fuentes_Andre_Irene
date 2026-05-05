@@ -7,10 +7,10 @@ Este proyecto es una solución tecnológica diseñada para ayudar a los usuarios
 ## 🚀 Estado Actual del Proyecto
 
 Actualmente, el proyecto es **100% funcional de extremo a extremo (End-to-End)**, contando con las siguientes piezas:
-1. **Limpieza e Ingesta de Datos (Completada y Optimizada):** El sistema es capaz de recibir CSVs masivos de PROFECO. Utiliza un algoritmo de "Upsert" y un índice compuesto en MongoDB para cargar grandes volúmenes de datos sin duplicar productos, manteniendo automáticamente el precio más reciente.
-2. **Infraestructura (Completada):** Se tiene configurado MongoDB en contenedores Docker con índices espaciales (`2dsphere`) y de búsqueda.
-3. **API Backend (Completada):** Servidor asíncrono robusto (FastAPI) que evalúa las **15 sucursales físicas más cercanas** para encontrar la mejor combinación, retornando tanto los productos hallados como un reporte de artículos faltantes en cada sucursal.
-4. **Frontend (Completado):** Interfaz gráfica interactiva (Dark Mode & Glassmorphism) que permite al usuario subir su lista, pedir su ubicación GPS y visualizar tarjetas con distancias, costos de gasolina y alertas de productos no encontrados.
+1. **Limpieza e Ingesta de Datos (Optimizada):** El sistema procesa CSVs masivos de PROFECO aplicando correcciones automáticas de encoding (ej: corregir "Atén" a "Atún", "Maöz" a "Maíz") y combinando productos con su presentación para búsquedas precisas. Utiliza "Upserts" en MongoDB para evitar duplicados.
+2. **Infraestructura:** MongoDB en Docker con índices espaciales (`2dsphere`) y de búsqueda por palabras clave.
+3. **API Backend:** Servidor FastAPI que soporta **cantidades y unidades** (ej: "6 litros leche", "2kg jitomate"). Extrae marcas específicas y realiza cálculos matemáticos de subtotales por sucursal.
+4. **Frontend:** Interfaz interactiva (Dark Mode) que muestra un **desglose detallado** de cada producto encontrado, su precio unitario, cantidad y el costo de gasolina hacia la sucursal.
 5. **CI/CD y Testing (Integrado):** Se implementó integración continua usando GitHub Actions con validaciones automatizadas de sintaxis y pruebas unitarias usando `Pytest`.
 
 ---
@@ -72,6 +72,13 @@ El proyecto ha sido rediseñado utilizando arquitectura de microservicios y una 
  ┣ 📂 tests/                 # 🧪 Pruebas Unitarias Automatizadas
  ┃ ┣ 📜 test_api.py          #   Validación del backend y endpoints
  ┃ ┗ 📜 test_limpieza.py     #   Validación del algoritmo de Pandas
+ ┣ 📂 scratch/               # 📓 Scripts de prueba y experimentación (Temporales)
+ ┃ ┣ 📜 test_parser.py       #   Validación de la lógica de extracción de cantidades
+ ┃ ┣ 📜 check_data.py        #   Verificación de corrección de encoding en DB
+ ┃ ┣ 📜 test_real_db.py      #   Simulación de búsqueda con datos reales
+ ┃ ┣ 📜 check_store.py       #   Inspección de inventario por sucursal específica
+ ┃ ┣ 📜 count.py             #   Conteo de documentos y validación de carga
+ ┃ ┗ 📜 test_full_logic.py   #   Prueba integral con mocks de base de datos
  ┣ 📂 mongo-init/            # 🗄️ Nivel 4: Infraestructura de Base de Datos
  ┃ ┗ 📜 01_init.js           #   Inicialización de Mongo e índices 2dsphere
  ┣ 📂 Datos/                 # 📥 Origen de Datos (Aquí van los CSVs de PROFECO)
@@ -88,20 +95,29 @@ Contiene el servidor web que coordina las interacciones del usuario, la IA y la 
 * **`database.py`**: Define la conexión asíncrona y segura a MongoDB utilizando la librería `motor`.
 * **`schemas.py`**: Define los modelos y reglas *Pydantic* para validar estrictamente la información que entra y sale de la API.
 * **`services/gemini_service.py`**: Aislador de la API de Google Gemini. Analiza la imagen recibida, extrae los productos y fuerza a la IA a respetar la marca, tamaño y medida exactos.
-* **`services/query_service.py`**: **El núcleo matemático**. Ejecuta la agregación geoespacial `$geoNear` en MongoDB, filtra productos asegurando que los precios pertenezcan a **la sucursal exacta más cercana** (evitando cruces de estado) y calcula en tiempo real el costo de gasolina (utilizando parámetros configurables desde `.env`).
+* **`services/query_service.py`**: **El núcleo matemático**. Incluye un *parser* de lenguaje natural para extraer cantidades (unidades, kg, litros). Ejecuta la agregación geoespacial `$geoNear` en MongoDB y filtra productos asegurando que los precios pertenezcan a la sucursal exacta, calculando el ahorro real incluyendo el traslado.
 * **`requirements.txt`**: Librerías y dependencias exclusivas para correr la API.
 
 ### 2. `data_pipeline/` (Limpieza de Datos PROFECO)
 Contiene los scripts locales que transforman el catálogo crudo en datos geolocalizables.
-* **`limpieza.py`**: Limpia los CSV filtrando 4 corporativos objetivo (Walmart, Soriana, Chedraui, La Comer). Remueve errores, limpia texto preservando semántica y genera coordenadas `GeoJSON Point`.
+* **`limpieza.py`**: Limpia los CSV filtrando 4 corporativos objetivo. **Corrige errores de encoding del origen** (UTF-8/Latin-1), normaliza texto preservando marcas y genera un `nombre_simplificado` que combina el producto con su presentación (ej: "cebolla 1kg") para un matching superior.
 * **`pipeline_limpieza.py`**: Interfaz de terminal (CLI) para correr el pipeline cómodamente (se puede ejecutar directamente desde la raíz del proyecto).
 * **`requirements.txt`**: Dependencias analíticas (Pandas, PyMongo) exclusivas para procesar datos.
+ 
+### 3. `scratch/` (Laboratorio y Pruebas Rápidas)
+Carpeta utilizada para validar algoritmos de forma aislada antes de integrarlos al flujo principal.
+* **`test_parser.py`**: Prueba unitaria para el motor de expresiones regulares que extrae cantidades y unidades.
+* **`check_data.py`**: Script de inspección directa para verificar que los errores de escritura (como "Atén") se corrijan a "atun" en la base de datos.
+* **`test_real_db.py`**: Orquestador de simulaciones que valida la búsqueda geoespacial y el cálculo de precios usando datos reales cargados.
+* **`check_store.py`**: Permite listar todos los productos de una coordenada específica para validar la variedad del inventario.
+* **`count.py`**: Utilidad rápida para verificar el número total de registros e índices en MongoDB.
+* **`test_full_logic.py`**: Simulación completa del flujo de optimización utilizando objetos simulados (*mocks*) para pruebas sin base de datos activa.
 
-### 3. Infraestructura Docker & MongoDB
+### 4. Infraestructura Docker & MongoDB
 * **`docker-compose.yml`** (En la raíz): Orquestador de contenedores que levanta el servidor de MongoDB y Mongo-Express (Interfaz Gráfica para la DB).
 * **`mongo-init/01_init.js`**: Script de arranque de MongoDB. Se ejecuta *automáticamente* la primera vez que inicia la base de datos para crear los usuarios de seguridad, validar el formato de los datos insertados y crear el índice `2dsphere` para que funcionen las búsquedas por distancia.
 
-### 4. Carpetas y Archivos Generales
+### 5. Carpetas y Archivos Generales
 * **`Datos/`**: Carpeta dedicada a almacenar temporalmente los pesados archivos `.csv` descargados directamente del sitio de PROFECO.
 * **`frontend/`**: Directorio estratégicamente preparado (y por ahora vacío) para alojar el código futuro de la interfaz web gráfica.
 * **`start.py`**: Orquestador principal de desarrollo. Con un solo comando (`python start.py`) levanta tu servidor FastAPI en segundo plano y además abre automáticamente un túnel web con **ngrok** para compartir tu app en internet.
@@ -139,3 +155,14 @@ Contiene los scripts locales que transforman el catálogo crudo en datos geoloca
    python start.py
    ```
    *(Abre tu navegador en `http://localhost:8000/` para utilizar la interfaz visual. Además, en tu terminal verás una URL pública generada por ngrok con la que puedes usar la aplicación desde tu teléfono)*.
+---
+
+## 💡 Ejemplos de Uso
+
+El sistema es capaz de procesar lenguaje natural tanto en texto como en fotos. Aquí algunos ejemplos de lo que puedes pedir:
+
+*   **Búsquedas con Marca:** "leche lala entera", "atun dolores en aceite".
+*   **Cantidades Específicas:** "6 litros leche alpura", "3 kg jitomate", "2 latas de atun".
+*   **Búsquedas Genéricas:** "huevo", "cebolla", "arroz". (El sistema buscará automáticamente la opción más económica de la categoría).
+
+**Tip:** Si usas la cámara, asegúrate de que la marca y el tamaño sean visibles; la IA de Gemini se encargará de extraer los detalles para que la comparativa sea justa entre tiendas.

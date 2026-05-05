@@ -125,9 +125,24 @@ _RE_ESPACIOS = re.compile(r"\s+")
 _RE_EXTRA    = re.compile(r"[^\w\s]")
  
  
+# Mapeo de corrupciones de caracteres comunes en CSV de PROFECO
+MAPA_CORRECCION = {
+    "atén": "atun",
+    "maöz": "maiz",
+    "azécar": "azucar",
+    "hémeda": "humeda",
+    "cµpsulas": "capsulas",
+    "tama¥o": "tamaño",
+    "jos©": "jose",
+    "m xico": "mexico",
+}
+
 def _limpiar_str(s: str) -> str:
-    """Normaliza a minúsculas sin espacios dobles."""
-    return _RE_ESPACIOS.sub(" ", str(s).strip().lower())
+    """Normaliza a minúsculas, corrige encoding y quita espacios dobles."""
+    text = str(s).strip().lower()
+    for corrupto, corregido in MAPA_CORRECCION.items():
+        text = text.replace(corrupto, corregido)
+    return _RE_ESPACIOS.sub(" ", text)
  
  
 def normalizar_cadena(raw: str) -> str | None:

@@ -8,16 +8,40 @@ PRECIO_GASOLINA   = float(os.getenv("PRECIO_GASOLINA_LT", "25.0"))   # MXN/litro
 RENDIMIENTO_KM_LT = float(os.getenv("RENDIMIENTO_KM_LT", "12.0"))    # km/litro
 
 
-async def optimizar_carrito(latitud: float, longitud: float, productos: List[str]):
+import re
+
+def parse_product_string(prod_str: str):
     """
-    1. Encuentra la sucursal más cercana de cada cadena (con su ubicación exacta).
-    2. Para cada sucursal, busca cada producto filtrando TAMBIÉN por ubicación
-       (misma cadena + misma sucursal identificada por cadena_raw).
-    3. Calcula costo total = subtotal productos + costo gasolina ida y vuelta.
+    Intenta extraer la cantidad al inicio de la cadena.
+    Ejemplos: 
+    - "6 litros leche lala" -> (6, "litros leche lala")
+    - "2latas atun dolores" -> (2, "latas atun dolores")
+    - "12x huevo" -> (12, "huevo")
+    """
+    prod_str = prod_str.strip()
+    # Regex más conservador: Número al inicio + opcionalmente 'x' o '*' + el resto
+    # El resto se mantiene casi íntegro para no perder términos que existan en DB (como 'litros')
+    match = re.match(r"^(\d+)\s*[xX*]?\s*(.*)$", prod_str)
+    if match:
+        try:
+            cantidad = int(match.group(1))
+            busqueda = match.group(2)
+            if busqueda: # Evitar que "6" devuelva busqueda vacía
+                return cantidad, busqueda
+        except ValueError:
+            pass
+    return 1, prod_str
+
+async def optimizar_carrito(latitud: float, longitud: float, productos: List[str]):
+    print(f"DEBUG: optimizar_carrito lat={latitud}, lon={longitud}, radio={RADIO_METROS}")
+    """
+    1. Encuentra la sucursal más cercana de cada cadena.
+    2. Procesa cada string para extraer cantidad y término de búsqueda.
+    3. Para cada sucursal, busca cada producto filtrando por ubicación.
+    4. Calcula costo total multiplicando por cantidad + gasolina.
     """
 
     # ── Paso 1: Obtener las 15 sucursales FÍSICAS más cercanas ─────────────────
-    # Agrupamos por coordenadas exactas, ya que "cadena_raw" no es único por sucursal física.
     pipeline_geo = [
         {
             "$geoNear": {
@@ -37,7 +61,7 @@ async def optimizar_carrito(latitud: float, longitud: float, productos: List[str
             }
         },
         {"$sort": {"distancia_mts": 1}},                     # Las más cercanas primero
-        {"$limit": 15},                                      # Aumentamos a 15 para tener ~3 de cada cadena
+        {"$limit": 15},
     ]
 
     sucursales = await db.precios.aggregate(pipeline_geo).to_list(length=15)
@@ -53,15 +77,21 @@ async def optimizar_carrito(latitud: float, longitud: float, productos: List[str
         productos_no_encontrados = []
         subtotal = 0.0
 
-        for prod in productos:
-            # Regex: todas las palabras del producto deben aparecer
-            palabras = [p for p in prod.lower().split() if len(p) > 1]
+        for prod_original in productos:
+            cantidad, termino_busqueda = parse_product_string(prod_original)
+            
+            # Regex: todas las palabras del término de búsqueda deben aparecer
+            palabras = [p for p in termino_busqueda.lower().split() if len(p) > 1]
+            if not palabras:
+                # Caso borde: si el string es muy corto, usarlo tal cual
+                palabras = [termino_busqueda.lower()]
+                
             regex_pattern = "".join([f"(?=.*{p})" for p in palabras]) + ".*"
 
-            # ── Filtro INQUEBRANTABLE por coordenada física + producto ─────────
+            # ── Filtro por coordenada física + producto ─────────
             item = await db.precios.find_one(
                 {
-                    "location.coordinates": suc["_id"],     # ← El ancla física real
+                    "location.coordinates": suc["_id"],
                     "nombre_simplificado": {
                         "$regex": regex_pattern,
                         "$options": "i",
@@ -71,18 +101,21 @@ async def optimizar_carrito(latitud: float, longitud: float, productos: List[str
             )
 
             if item:
+                precio_unitario = item["precio"]
+                precio_total = round(precio_unitario * cantidad, 2)
+                
                 productos_encontrados.append({
-                    "producto":     item["producto"],
-                    "precio":       item["precio"],
-                    "distancia_km": round(distancia_km, 2),
+                    "producto":        item["producto"],
+                    "precio_unitario": precio_unitario,
+                    "cantidad":        cantidad,
+                    "precio_total":    precio_total,
+                    "distancia_km":    round(distancia_km, 2),
                 })
-                subtotal += item["precio"]
+                subtotal += precio_total
             else:
-                productos_no_encontrados.append(prod)
+                productos_no_encontrados.append(prod_original)
 
-        # Solo incluir sucursales donde se encontró al menos 1 producto
         if productos_encontrados:
-            # Manejar el caso donde direccion pueda ser nulo si son datos viejos
             dir_str = suc.get("direccion")
             if not dir_str or str(dir_str).lower() == "nan":
                 dir_str = "Dirección no disponible"
@@ -99,7 +132,5 @@ async def optimizar_carrito(latitud: float, longitud: float, productos: List[str
                 "total_viaje":          round(subtotal + costo_gasolina, 2),
             })
 
-    # Ordenar de la opción más barata a la más cara (Costo Total)
     resultados_finales.sort(key=lambda x: x["total_viaje"])
-
     return resultados_finales

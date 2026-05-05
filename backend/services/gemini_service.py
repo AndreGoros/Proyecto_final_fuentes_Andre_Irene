@@ -14,13 +14,19 @@ else:
 # Modificamos el prompt para que CONSERVE las marcas y medidas,
 # ya que ahora nuestra base de datos tiene esa capacidad gracias a la limpieza.
 PROMPT_GEMINI = """
-Eres un asistente que extrae nombres de productos de una lista de compras.
-Analiza la imagen y devuelve SOLO un JSON con este formato exacto, sin texto adicional:
+Eres un asistente experto en compras. Tu tarea es extraer productos de una lista de compras (imagen).
+Analiza la imagen y devuelve SOLO un JSON con este formato exacto:
 {
-  "productos": ["leche lala deslactosada 1l", "pan bimbo blanco", "huevo san juan 18 piezas"]
+  "productos": ["6 litros leche lala entera", "2latas atun dolores", "1kg frijoles la costeña", "pan bimbo grande"]
 }
-IMPORTANTE: Los nombres deben incluir la marca, tamaño, cantidad y especificaciones tal como aparecen en la imagen. No uses nombres genéricos si en la foto hay una marca clara.
-TODO EL TEXTO DEBE ESTAR EN MINÚSCULAS.
+
+REGLAS CRÍTICAS:
+1. EXTRACCIÓN DE MARCAS: Es obligatorio incluir la marca (ej. lala, alpura, dolores, bimbo, la costeña) si es visible.
+2. CANTIDADES: Si la lista indica una cantidad (ej. 6 piezas, 3 litros, 2kg), pon el número al INICIO del string (ej. "3 litros leche...").
+3. DETALLES: Incluye especificaciones como "entera", "deslactosada", "en aceite", "negros", etc.
+4. TODO EN MINÚSCULAS.
+5. NO uses nombres genéricos si hay marcas visibles.
+6. Si no hay cantidad especificada, asume 1 pero no es necesario poner el "1" al inicio a menos que sea explícito.
 """
 
 def extraer_productos_gemini(imagen_bytes: bytes, mime_type: str) -> list[str]:

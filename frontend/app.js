@@ -106,28 +106,47 @@ document.addEventListener('DOMContentLoaded', () => {
             let icon = 'fa-building';
             if(res.cadena.toLowerCase().includes('walmart')) icon = 'fa-cart-shopping';
             else if(res.cadena.toLowerCase().includes('soriana')) icon = 'fa-basket-shopping';
+            
+            // Generar HTML de productos encontrados
+            let foundItemsHtml = res.productos_encontrados.map(p => `
+                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                    <div style="max-width: 65%;">
+                        <span style="color: #4ade80; font-weight: bold;">${p.cantidad}x</span> 
+                        <span style="color: #e2e8f0;">${p.producto}</span>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="color: #e2e8f0; font-weight: 600;">$${p.precio_total.toFixed(2)}</div>
+                        <div style="font-size: 0.7rem; color: #94a3b8;">u: $${p.precio_unitario.toFixed(2)}</div>
+                    </div>
+                </div>
+            `).join('');
+
             let missingItemsHtml = '';
             if (res.productos_no_encontrados && res.productos_no_encontrados.length > 0) {
                 missingItemsHtml = `
                     <div style="margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid #334155; font-size: 0.85rem; color: #94a3b8;">
                         <i class="fa-solid fa-triangle-exclamation" style="color: #fbbf24;"></i>
-                        Artículos no encontrados: <span style="color: #e2e8f0;">${res.productos_no_encontrados.join(', ')}</span>
+                        Faltan: <span style="color: #e2e8f0;">${res.productos_no_encontrados.join(', ')}</span>
                     </div>
                 `;
             }
 
             card.innerHTML = `
                 <div class="store-info">
-                    <h3><i class="fa-solid ${icon}"></i> ${res.cadena}</h3>
+                    <h3 style="margin-bottom: 0.5rem;"><i class="fa-solid ${icon}"></i> ${res.cadena}</h3>
                     <div class="store-details" style="font-weight: 600;">
                         <span><i class="fa-solid fa-map-location-dot"></i> ${res.sucursal}</span>
                         <span><i class="fa-solid fa-road"></i> ${res.distancia_km} km</span>
                     </div>
-                    <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.2rem; margin-bottom: 0.5rem; text-transform: capitalize;">
+                    <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.2rem; margin-bottom: 1rem; text-transform: capitalize;">
                         <i class="fa-solid fa-location-dot"></i> ${res.direccion}
                     </div>
-                    <div class="store-details" style="margin-top:0.5rem; color:#4ade80;">
-                        <i class="fa-solid fa-check"></i> ${res.productos_encontrados.length} prod.
+                    
+                    <div style="margin-bottom: 0.5rem; font-size: 0.85rem; font-weight: 600; color: #4ade80;">
+                        <i class="fa-solid fa-check"></i> Productos Encontrados:
+                    </div>
+                    <div class="found-items-list" style="margin-bottom: 0.5rem;">
+                        ${foundItemsHtml}
                     </div>
                 </div>
                 <div class="price-info">

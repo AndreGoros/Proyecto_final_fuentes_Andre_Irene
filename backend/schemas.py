@@ -11,7 +11,9 @@ class OptimizeCartRequest(BaseModel):
 
 class ProductItem(BaseModel):
     producto: str
-    precio: float
+    precio_unitario: float
+    cantidad: int
+    precio_total: float
     distancia_km: float
 
 class StoreResult(BaseModel):
