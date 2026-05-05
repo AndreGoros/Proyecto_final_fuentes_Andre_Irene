@@ -94,7 +94,7 @@ Contiene el servidor web que coordina las interacciones del usuario, la IA y la 
 
 ### 2. `data_pipeline/` (Limpieza de Datos PROFECO)
 Contiene los scripts locales que transforman el catálogo crudo en datos geolocalizables.
-* **`limpieza.py`**: Limpia los CSV filtrando 4 corporativos objetivo. **Corrige errores de encoding del origen** (UTF-8/Latin-1), normaliza texto preservando marcas y genera un `nombre_simplificado` que combina el producto con su presentación (ej: "cebolla 1kg") para un matching superior.
+* **`limpieza.py`**: Limpia los CSV filtrando 4 corporativos objetivo. **Resuelve la corrupción de encoding del origen** mediante un mapa de traducción inteligente (ej: convierte `Jamàn` en `jamon` y `Clµsico` en `clasico`), normaliza texto preservando marcas y genera un `nombre_simplificado` que combina el producto con su presentación para un matching superior.
 * **`pipeline_limpieza.py`**: Interfaz de terminal (CLI) para correr el pipeline cómodamente (se puede ejecutar directamente desde la raíz del proyecto).
 * **`requirements.txt`**: Dependencias analíticas (Pandas, PyMongo) exclusivas para procesar datos.
  
@@ -120,6 +120,10 @@ Carpeta utilizada para validar algoritmos de forma aislada antes de integrarlos 
 * **`test_phonetic_regex_fixed.py`**: Versión final corregida de la búsqueda fonética.
 * **`test_real_db.py`**: Simulación de búsqueda real contra los datos de PROFECO.
 * **`test_real_search.py`**: Validación de resultados por cercanía y disponibilidad real.
+* **`inspect_quesos.py`**: Diagnóstico de variedades de queso (Manchego, Oaxaca, Chihuahua) en el catálogo.
+* **`debug_missing.py`**: Herramienta de autopsia para investigar por qué productos básicos (ej. Jamón) no aparecen en búsquedas.
+* **`find_real_bread.py`**: Localiza nombres técnicos de panificados (ej. "Pan de caja" vs "Pan blanco").
+* **`test_missing_items.py`**: Simulación de estrés para productos específicos que el usuario reporta como no encontrados.
 
 ### 4. Infraestructura Docker & MongoDB
 * **`docker-compose.yml`** (En la raíz): Orquestador de contenedores que levanta el servidor de MongoDB y Mongo-Express (Interfaz Gráfica para la DB).

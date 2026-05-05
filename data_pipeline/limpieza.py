@@ -135,6 +135,8 @@ MAPA_CORRECCION = {
     "tama¥o": "tamaño",
     "jos©": "jose",
     "m xico": "mexico",
+    "jamàn": "jamon",
+    "clµsico": "clasico",
 }
 
 def _limpiar_str(s: str) -> str:
