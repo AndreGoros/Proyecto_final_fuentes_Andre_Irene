@@ -7,7 +7,7 @@ import google.generativeai as genai
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
-    gemini = genai.GenerativeModel("gemini-1.5-flash")
+    gemini = genai.GenerativeModel("gemini-flash-latest")
 else:
     gemini = None
 
@@ -64,12 +64,13 @@ def corregir_lista_texto(texto_usuario: str) -> list[str]:
         # Si no hay API KEY, devolvemos la lista tal cual (fallo elegante)
         return [p.strip().lower() for p in texto_usuario.split(",") if p.strip()]
         
-    response = gemini.generate_content(f"{PROMPT_CORRECCION}\n\nLISTA: {texto_usuario}")
-    
-    texto = response.text.strip()
-    texto = re.sub(r"```json|```", "", texto).strip()
     try:
+        response = gemini.generate_content(f"{PROMPT_CORRECCION}\n\nLISTA: {texto_usuario}")
+        texto = response.text.strip()
+        texto = re.sub(r"```json|```", "", texto).strip()
         data = json.loads(texto)
         return [p.lower().strip() for p in data.get("productos", [])]
-    except:
+    except Exception as e:
+        print(f"ERROR en Gemini: {e}")
+        # Fallback: devolver la lista original separada por comas
         return [p.strip().lower() for p in texto_usuario.split(",") if p.strip()]

@@ -6,6 +6,9 @@ from services.gemini_service import extraer_productos_gemini, corregir_lista_tex
 from database import ping_db
 import os
 from fastapi.staticfiles import StaticFiles
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI(
     title="API de Optimización de Canasta Básica",
@@ -32,17 +35,21 @@ async def endpoint_optimizar_carrito(request: OptimizeCartRequest):
         # Usamos Gemini para normalizar y corregir la lista (typos, marcas, etc)
         texto_unificado = ", ".join(request.productos)
         productos_corregidos = corregir_lista_texto(texto_unificado)
+        print(f"DEBUG: Productos corregidos por Gemini: {productos_corregidos}")
         
         resultados = await optimizar_carrito(
             latitud=request.ubicacion_usuario.latitud,
             longitud=request.ubicacion_usuario.longitud,
             productos=productos_corregidos
         )
-        resultados.sort(key=lambda x: x["total_viaje"])
+        # Categorizar resultados
+        completos = [r for r in resultados if not r["productos_no_encontrados"]]
+        incompletos = [r for r in resultados if r["productos_no_encontrados"]]
         
         return {
-            "resultados": resultados,
-            "productos_detectados": productos_corregidos # Para que el usuario vea qué entendió el sistema
+            "mejores_completos": completos,
+            "mejores_incompletos": incompletos,
+            "productos_detectados": productos_corregidos
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -76,11 +83,14 @@ async def analizar_foto(
             longitud=longitud,
             productos=productos
         )
-        resultados.sort(key=lambda x: x["total_viaje"])
+        # Categorizar resultados
+        completos = [r for r in resultados if not r["productos_no_encontrados"]]
+        incompletos = [r for r in resultados if r["productos_no_encontrados"]]
         
         return {
-            "productos_detectados": productos,
-            "resultados": resultados
+            "mejores_completos": completos,
+            "mejores_incompletos": incompletos,
+            "productos_detectados": productos
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error consultando DB: {e}")

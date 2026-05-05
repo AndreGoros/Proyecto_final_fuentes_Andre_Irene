@@ -91,72 +91,96 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch(endpoint, options);
             if (!res.ok) { const err = await res.json(); throw new Error(err.detail || 'Error en servidor'); }
             const data = await res.json();
-            renderResults(data.resultados);
+            renderResults(data);
             resultsSection.classList.remove('hidden'); resultsSection.scrollIntoView({ behavior: 'smooth' });
         } catch (err) { alert('Aviso: ' + err.message + '\n\n(Asegúrate de que Docker esté corriendo y Gemini tenga API Key)'); } finally { loadingOverlay.classList.add('hidden'); }
     });
 
-    function renderResults(resultados) {
+    function renderResults(data) {
         resultsContainer.innerHTML = '';
-        if (!resultados || resultados.length === 0) {
-            resultsContainer.innerHTML = '<p style="text-align:center">No se encontraron tiendas cercanas.</p>'; return;
+        const { mejores_completos, mejores_incompletos } = data;
+
+        if (!mejores_completos?.length && !mejores_incompletos?.length) {
+            resultsContainer.innerHTML = '<p style="text-align:center">No se encontraron tiendas cercanas.</p>';
+            return;
         }
-        resultados.forEach(res => {
-            const card = document.createElement('div'); card.className = 'card';
-            let icon = 'fa-building';
-            if(res.cadena.toLowerCase().includes('walmart')) icon = 'fa-cart-shopping';
-            else if(res.cadena.toLowerCase().includes('soriana')) icon = 'fa-basket-shopping';
-            
-            // Generar HTML de productos encontrados
-            let foundItemsHtml = res.productos_encontrados.map(p => `
-                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
-                    <div style="max-width: 65%;">
-                        <span style="color: #4ade80; font-weight: bold;">${p.cantidad}x</span> 
-                        <span style="color: #e2e8f0;">${p.producto}</span>
-                    </div>
-                    <div style="text-align: right;">
-                        <div style="color: #e2e8f0; font-weight: 600;">$${p.precio_total.toFixed(2)}</div>
-                        <div style="font-size: 0.7rem; color: #94a3b8;">u: $${p.precio_unitario.toFixed(2)}</div>
-                    </div>
-                </div>
-            `).join('');
 
-            let missingItemsHtml = '';
-            if (res.productos_no_encontrados && res.productos_no_encontrados.length > 0) {
-                missingItemsHtml = `
-                    <div style="margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid #334155; font-size: 0.85rem; color: #94a3b8;">
-                        <i class="fa-solid fa-triangle-exclamation" style="color: #fbbf24;"></i>
-                        Faltan: <span style="color: #e2e8f0;">${res.productos_no_encontrados.join(', ')}</span>
-                    </div>
-                `;
-            }
+        if (mejores_completos && mejores_completos.length > 0) {
+            const header = document.createElement('div');
+            header.className = 'section-header header-completos';
+            header.innerHTML = '<h3><i class="fa-solid fa-circle-check"></i> Tiendas con Lista Completa</h3><p style="font-size:0.8rem; opacity:0.8">Estas opciones aseguran cubrir todos tus productos al mejor precio.</p>';
+            resultsContainer.appendChild(header);
+            mejores_completos.forEach(res => resultsContainer.appendChild(createCard(res, false)));
+        }
 
-            card.innerHTML = `
+        if (mejores_incompletos && mejores_incompletos.length > 0) {
+            const header = document.createElement('div');
+            header.className = 'section-header header-incompletos';
+            header.innerHTML = '<h3><i class="fa-solid fa-triangle-exclamation"></i> Otras Opciones (Incompletas)</h3>';
+            resultsContainer.appendChild(header);
+
+            const warning = document.createElement('div');
+            warning.className = 'warning-box';
+            warning.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> AVISO: Las siguientes opciones no aseguran cubrir la lista completa.';
+            resultsContainer.appendChild(warning);
+            mejores_incompletos.forEach(res => resultsContainer.appendChild(createCard(res, true)));
+        }
+    }
+
+    function createCard(res, isIncompleto) {
+        const card = document.createElement('div');
+        card.className = 'card';
+
+        const listaProdHTML = res.productos_encontrados.map(p => `
+            <div class="product-item">
+                <span><small>${p.cantidad}x</small> ${p.producto}</span>
+                <span style="font-weight:600">$${p.precio_total.toFixed(2)}</span>
+            </div>
+            <div style="font-size:0.7rem; color:var(--text-muted); margin-bottom:0.6rem; text-align:right">u: $${p.precio_unitario.toFixed(2)}</div>
+        `).join('');
+
+        const faltantesHTML = isIncompleto ? `
+            <div class="missing-items">
+                <h4><i class="fa-solid fa-circle-xmark"></i> Faltantes:</h4>
+                <div class="missing-list">${res.productos_no_encontrados.join(', ')}</div>
+            </div>
+        ` : '';
+
+        card.innerHTML = `
+            <div class="card-top">
                 <div class="store-info">
-                    <h3 style="margin-bottom: 0.5rem;"><i class="fa-solid ${icon}"></i> ${res.cadena}</h3>
-                    <div class="store-details" style="font-weight: 600;">
-                        <span><i class="fa-solid fa-map-location-dot"></i> ${res.sucursal}</span>
-                        <span><i class="fa-solid fa-road"></i> ${res.distancia_km} km</span>
-                    </div>
-                    <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.2rem; margin-bottom: 1rem; text-transform: capitalize;">
-                        <i class="fa-solid fa-location-dot"></i> ${res.direccion}
-                    </div>
-                    
-                    <div style="margin-bottom: 0.5rem; font-size: 0.85rem; font-weight: 600; color: #4ade80;">
-                        <i class="fa-solid fa-check"></i> Productos Encontrados:
-                    </div>
-                    <div class="found-items-list" style="margin-bottom: 0.5rem;">
-                        ${foundItemsHtml}
+                    <h3><i class="fa-solid fa-shop"></i> ${res.cadena}</h3>
+                    <div class="store-details">
+                        <span><i class="fa-solid fa-location-dot"></i> ${res.sucursal}</span>
+                        <span><i class="fa-solid fa-road"></i> ${res.distancia_km.toFixed(1)} km</span>
                     </div>
                 </div>
                 <div class="price-info">
                     <div class="total-price">$${res.total_viaje.toFixed(2)}</div>
-                    <div class="sub-price">Carro: $${res.subtotal_productos.toFixed(2)}</div>
-                    <div class="sub-price"><i class="fa-solid fa-gas-pump"></i> Gas: $${res.costo_gasolina.toFixed(2)}</div>
+                    <div class="sub-price">Total estimado (incl. viaje)</div>
                 </div>
-                ${missingItemsHtml}
-            `;
-            resultsContainer.appendChild(card);
-        });
+            </div>
+
+            <div class="card-content">
+                <div class="products-found">
+                    <h4><i class="fa-solid fa-check-double"></i> Productos Encontrados:</h4>
+                    ${listaProdHTML}
+                </div>
+                
+                <div class="summary-side">
+                    <div class="cost-breakdown" style="font-size: 0.85rem; padding:1rem; background:rgba(255,255,255,0.05); border-radius:10px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.5rem">
+                            <span>🛒 Carro:</span> <b>$${res.subtotal_productos.toFixed(2)}</b>
+                        </div>
+                        <div style="display:flex; justify-content:space-between">
+                            <span>⛽ Gasolina:</span> <b>$${res.costo_gasolina.toFixed(2)}</b>
+                        </div>
+                    </div>
+                    
+                    ${faltantesHTML}
+                </div>
+            </div>
+        `;
+        return card;
     }
 });

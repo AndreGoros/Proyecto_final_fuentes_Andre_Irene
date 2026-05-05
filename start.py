@@ -28,7 +28,7 @@ PORT = 8000
 def main():
     print(f"[start] Levantando FastAPI en localhost:{PORT} ...")
     server = subprocess.Popen(
-        [sys.executable, "-m", "uvicorn", "main:app", "--port", str(PORT)],
+        [sys.executable, "-m", "uvicorn", "main:app", "--port", str(PORT), "--reload"],
         cwd="backend",
         stdout=sys.stdout,
         stderr=sys.stderr,

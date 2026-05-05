@@ -28,5 +28,6 @@ class StoreResult(BaseModel):
     total_viaje: float
 
 class OptimizeCartResponse(BaseModel):
-    resultados: List[StoreResult]
+    mejores_completos: List[StoreResult] = []
+    mejores_incompletos: List[StoreResult] = []
     productos_detectados: List[str] = []

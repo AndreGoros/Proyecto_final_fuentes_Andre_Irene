@@ -9,18 +9,37 @@ RENDIMIENTO_KM_LT = float(os.getenv("RENDIMIENTO_KM_LT", "12.0"))    # km/litro
 
 
 import re
+from dotenv import load_dotenv
+
+load_dotenv()
+import unicodedata
+
+def remove_accents(text: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFD", text) if unicodedata.category(c) != "Mn")
 
 # Palabras que suelen venir en la consulta del usuario pero que estorban en la búsqueda en DB
-UNIDADES_IGNORAR = {
-    "latas", "lata", "piezas", "pz", "kg", "kilos", "kilo", "litros", "litro", 
-    "paquete", "pq", "cajas", "caja", "bolsa", "frasco", "botes", "bote"
+PALABRAS_IGNORAR = {
+    "piezas", "pz", "de", "con", "en", "el", "la", "los", "las", "un", "una", "y"
+}
+
+# Normalización de términos para que coincidan con la DB (ej. 'litros' -> 'lt')
+SINONIMOS_BUSQUEDA = {
+    "litros": "lt",
+    "litro":  "lt",
+    "kilos":  "kg",
+    "kilo":   "kg",
+    "latas":  "lata",
+    "paquetes": "paquete",
+    "bolsas": "bolsa",
+    "frascos": "frasco",
+    "botes": "bote"
 }
 
 def parse_product_string(prod_str: str):
     """
     Intenta extraer la cantidad al inicio de la cadena y limpia unidades comunes.
     """
-    prod_str = prod_str.strip().lower()
+    prod_str = remove_accents(prod_str.strip().lower())
     
     # 1. Extraer cantidad
     cantidad = 1
@@ -34,7 +53,13 @@ def parse_product_string(prod_str: str):
             
     # 2. Limpiar palabras que son unidades y que a veces no coinciden con la DB
     palabras = prod_str.split()
-    filtradas = [p for p in palabras if p not in UNIDADES_IGNORAR]
+    filtradas = []
+    for p in palabras:
+        if p in PALABRAS_IGNORAR:
+            continue
+        # Normalizar unidades (ej. litros -> lt)
+        p_norm = SINONIMOS_BUSQUEDA.get(p, p)
+        filtradas.append(p_norm)
     
     # Si al filtrar nos quedamos sin nada (ej. "6 latas"), volvemos al original
     busqueda = " ".join(filtradas) if filtradas else prod_str
@@ -74,6 +99,7 @@ async def optimizar_carrito(latitud: float, longitud: float, productos: List[str
     ]
 
     sucursales = await db.precios.aggregate(pipeline_geo).to_list(length=15)
+    print(f"DEBUG: Sucursales encontradas en el radio: {len(sucursales)}")
 
     resultados_finales = []
 
@@ -90,12 +116,39 @@ async def optimizar_carrito(latitud: float, longitud: float, productos: List[str
             cantidad, termino_busqueda = parse_product_string(prod_original)
             
             # Regex: todas las palabras del término de búsqueda deben aparecer
-            palabras = [p for p in termino_busqueda.lower().split() if len(p) > 1]
-            if not palabras:
+            palabras_query = [p for p in termino_busqueda.lower().split() if len(p) > 1]
+            if not palabras_query:
                 # Caso borde: si el string es muy corto, usarlo tal cual
-                palabras = [termino_busqueda.lower()]
+                palabras_query = [termino_busqueda.lower()]
                 
-            regex_pattern = "".join([f"(?=.*{p})" for p in palabras]) + ".*"
+            # Flexibilidad fonética para errores comunes en español (g/j, s/z/c, b/v, h muda)
+            palabras_flex = []
+            for p in palabras_query:
+                f = p.lower()
+                
+                # Reemplazos con placeholders para evitar anidamiento
+                f = f.replace("b", "B").replace("v", "B")
+                f = f.replace("g", "G").replace("j", "G")
+                f = f.replace("s", "S").replace("z", "S").replace("c", "S")
+                
+                # Reemplazo final de placeholders
+                f = f.replace("B", "[bv]").replace("G", "[gj]").replace("S", "[szc]")
+                
+                # r/rr
+                f = f.replace("rr", "r").replace("r", "r+")
+                
+                # h opcional solo si no empieza con un grupo o clase
+                if not f.startswith("["):
+                    f = "h?" + f
+                
+                palabras_flex.append(f)
+
+            # Evitar distractores comunes si no fueron pedidos explícitamente (ej. evitar 'harina de arroz' si pidió 'arroz')
+            distractores = ["harina", "bebida", "polvo", "galletas"]
+            avoid_regex = "".join([f"(?!.*{d})" for d in distractores if d not in termino_busqueda.lower()])
+            
+            regex_pattern = avoid_regex + "".join([f"(?=.*{p})" for p in palabras_flex]) + ".*"
+            print(f"  DEBUG: Buscando '{prod_original}' -> Term: '{termino_busqueda}' -> Regex: '{regex_pattern}'")
 
             # ── Filtro por coordenada física + producto ─────────
             item = await db.precios.find_one(
@@ -108,13 +161,21 @@ async def optimizar_carrito(latitud: float, longitud: float, productos: List[str
                 },
                 sort=[("precio", 1)],
             )
+            
+            if item:
+                print(f"    DEBUG: [OK] Encontrado en {suc['cadena']}: {item['producto']} (${item['precio']})")
+            else:
+                print(f"    DEBUG: [X] NO ENCONTRADO en {suc['cadena']}")
 
             if item:
                 precio_unitario = item["precio"]
                 precio_total = round(precio_unitario * cantidad, 2)
                 
+                # Limpieza estética del nombre del producto
+                nombre_mostrado = item["producto"].replace("atén", "atún").replace("tehuacµn", "tehuacán")
+
                 productos_encontrados.append({
-                    "producto":        item["producto"],
+                    "producto":        nombre_mostrado,
                     "precio_unitario": precio_unitario,
                     "cantidad":        cantidad,
                     "precio_total":    precio_total,
