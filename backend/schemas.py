@@ -29,3 +29,4 @@ class StoreResult(BaseModel):
 
 class OptimizeCartResponse(BaseModel):
     resultados: List[StoreResult]
+    productos_detectados: List[str] = []

@@ -43,3 +43,33 @@ def extraer_productos_gemini(imagen_bytes: bytes, mime_type: str) -> list[str]:
     texto = re.sub(r"```json|```", "", texto).strip()
     data = json.loads(texto)
     return [p.lower().strip() for p in data.get("productos", [])]
+
+PROMPT_CORRECCION = """
+Eres un experto en compras. Tu tarea es corregir y normalizar una lista de productos que puede tener errores ortográficos o términos informales.
+Devuelve SOLO un JSON con este formato exacto:
+{
+  "productos": ["producto 1", "producto 2"]
+}
+
+REGLAS:
+1. CORRIGE ERRORES: Ej: "gitomate" -> "jitomate", "leche lala 6l" -> "6 litros leche lala".
+2. SEPARA PRODUCTOS: Si vienen en una sola línea separados por comas, sepáralos.
+3. CONSERVA MARCAS: Si el usuario especifica marca, mantenla.
+4. CANTIDADES AL INICIO: Pon el número al inicio.
+5. TODO EN MINÚSCULAS.
+"""
+
+def corregir_lista_texto(texto_usuario: str) -> list[str]:
+    if not gemini:
+        # Si no hay API KEY, devolvemos la lista tal cual (fallo elegante)
+        return [p.strip().lower() for p in texto_usuario.split(",") if p.strip()]
+        
+    response = gemini.generate_content(f"{PROMPT_CORRECCION}\n\nLISTA: {texto_usuario}")
+    
+    texto = response.text.strip()
+    texto = re.sub(r"```json|```", "", texto).strip()
+    try:
+        data = json.loads(texto)
+        return [p.lower().strip() for p in data.get("productos", [])]
+    except:
+        return [p.strip().lower() for p in texto_usuario.split(",") if p.strip()]

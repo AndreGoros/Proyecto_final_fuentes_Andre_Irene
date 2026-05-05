@@ -77,8 +77,8 @@ CADENAS_PERMITIDAS: dict[str, str] = {
 COLUMNAS_DESCARTADAS: list[str] = [
     # columnas de ubicación textual (ya tenemos lat/lon, pero el usuario pidió conservar direccion)
     "giro", "municipio", "estado", "nombre_comercial",
-    # columnas de catálogo / presentación (muy específicas, no útiles para Gemini)
-    "catalogo", "presentacion",
+    # columnas de catálogo (muy específicas, no útiles para Gemini)
+    "catalogo",
     # columnas legacy / alternativas
     "NombreComercial", "RazonSocial", "Estatus", "Tipo",
     "Giro", "Municipio", "Estado",          # mayúsculas por si vienen así
@@ -108,8 +108,8 @@ COLUMNAS_REQUERIDAS: set[str] = {
     "Cadena", "Producto", "Precio", "LATITUD", "LONGITUD",
 }
  
-# Límites outlier (IQR × k)
-IQR_K = 3.0
+# Límites outlier (IQR × k) - Aumentado para proteger carne y productos caros
+IQR_K = 10.0
  
 # Configuración MongoDB por defecto (sobreescribible vía argumentos CLI)
 MONGO_URI_DEFAULT    = os.getenv("MONGO_URI", "mongodb://pipeline_user:pipeline1234@localhost:27017/precios_db?authSource=admin")
@@ -234,8 +234,13 @@ def limpiar(df: pd.DataFrame) -> pd.DataFrame:
     df = df[df["LATITUD"].notna() & df["LONGITUD"].notna()].copy()
     log.info("  Coordenadas inválidas: %d filas descartadas", antes - len(df))
  
-    # 4. Nombre simplificado para Gemini
-    df["nombre_simplificado"] = df["Producto"].apply(simplificar_nombre)
+    # 4. Nombre simplificado para Gemini (Combina Producto, Presentación y Marca)
+    # Rellenamos nulos en caso de que falten
+    p_prod = df["Producto"].fillna("")
+    p_pres = df["presentacion"].fillna("") if "presentacion" in df.columns else ""
+    p_marc = df["marca"].fillna("") if "marca" in df.columns else ""
+    
+    df["nombre_simplificado"] = (p_prod + " " + p_pres + " " + p_marc).apply(simplificar_nombre)
  
     # 5. Descarte de columnas de ruido
     cols_a_eliminar = [c for c in COLUMNAS_DESCARTADAS if c in df.columns]
@@ -310,10 +315,29 @@ def conectar_mongo(uri: str, db_name: str, col_name: str) -> Collection:
     # Verificar conexión
     client.admin.command("ping")
     col = client[db_name][col_name]
+    
+    # ── Manejo de índices ──────────────────────────────────────────────────
     col.create_index([("location", GEOSPHERE)], name="idx_location_2dsphere")
     # Índice para acelerar los upserts masivos enormemente
     col.create_index([("location.coordinates", 1), ("producto", 1)], name="idx_upsert_fast")
-    log.info("Conectado a MongoDB: %s / %s / %s", uri, db_name, col_name)
+    
+    # Resolver conflicto de índices de texto (MongoDB solo permite uno por colección)
+    try:
+        # Intentamos borrar el índice antiguo que causa conflicto
+        col.drop_index("idx_text_producto")
+        log.info("Índice antiguo 'idx_text_producto' eliminado.")
+    except Exception:
+        pass # Si no existe, no pasa nada
+        
+    # Índice de texto para búsquedas flexibles (ignora orden de palabras, soporta búsqueda por términos)
+    # Lo configuramos explícitamente en español para mejor stemming
+    col.create_index(
+        [("nombre_simplificado", "text")], 
+        name="idx_nombre_texto",
+        default_language="spanish"
+    )
+    
+    log.info("Conectado a MongoDB y creados los índices: %s / %s / %s", uri, db_name, col_name)
     return col
  
  

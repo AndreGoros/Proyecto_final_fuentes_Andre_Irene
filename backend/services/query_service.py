@@ -10,27 +10,36 @@ RENDIMIENTO_KM_LT = float(os.getenv("RENDIMIENTO_KM_LT", "12.0"))    # km/litro
 
 import re
 
+# Palabras que suelen venir en la consulta del usuario pero que estorban en la búsqueda en DB
+UNIDADES_IGNORAR = {
+    "latas", "lata", "piezas", "pz", "kg", "kilos", "kilo", "litros", "litro", 
+    "paquete", "pq", "cajas", "caja", "bolsa", "frasco", "botes", "bote"
+}
+
 def parse_product_string(prod_str: str):
     """
-    Intenta extraer la cantidad al inicio de la cadena.
-    Ejemplos: 
-    - "6 litros leche lala" -> (6, "litros leche lala")
-    - "2latas atun dolores" -> (2, "latas atun dolores")
-    - "12x huevo" -> (12, "huevo")
+    Intenta extraer la cantidad al inicio de la cadena y limpia unidades comunes.
     """
-    prod_str = prod_str.strip()
-    # Regex más conservador: Número al inicio + opcionalmente 'x' o '*' + el resto
-    # El resto se mantiene casi íntegro para no perder términos que existan en DB (como 'litros')
+    prod_str = prod_str.strip().lower()
+    
+    # 1. Extraer cantidad
+    cantidad = 1
     match = re.match(r"^(\d+)\s*[xX*]?\s*(.*)$", prod_str)
     if match:
         try:
             cantidad = int(match.group(1))
-            busqueda = match.group(2)
-            if busqueda: # Evitar que "6" devuelva busqueda vacía
-                return cantidad, busqueda
+            prod_str = match.group(2)
         except ValueError:
             pass
-    return 1, prod_str
+            
+    # 2. Limpiar palabras que son unidades y que a veces no coinciden con la DB
+    palabras = prod_str.split()
+    filtradas = [p for p in palabras if p not in UNIDADES_IGNORAR]
+    
+    # Si al filtrar nos quedamos sin nada (ej. "6 latas"), volvemos al original
+    busqueda = " ".join(filtradas) if filtradas else prod_str
+    
+    return cantidad, busqueda
 
 async def optimizar_carrito(latitud: float, longitud: float, productos: List[str]):
     print(f"DEBUG: optimizar_carrito lat={latitud}, lon={longitud}, radio={RADIO_METROS}")

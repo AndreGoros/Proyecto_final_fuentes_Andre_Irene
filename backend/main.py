@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from schemas import OptimizeCartRequest, OptimizeCartResponse
 from services.query_service import optimizar_carrito
-from services.gemini_service import extraer_productos_gemini
+from services.gemini_service import extraer_productos_gemini, corregir_lista_texto
 from database import ping_db
 import os
 from fastapi.staticfiles import StaticFiles
@@ -29,13 +29,21 @@ async def health_check():
 async def endpoint_optimizar_carrito(request: OptimizeCartRequest):
     """Ruta para cuando la lista ya es texto."""
     try:
+        # Usamos Gemini para normalizar y corregir la lista (typos, marcas, etc)
+        texto_unificado = ", ".join(request.productos)
+        productos_corregidos = corregir_lista_texto(texto_unificado)
+        
         resultados = await optimizar_carrito(
             latitud=request.ubicacion_usuario.latitud,
             longitud=request.ubicacion_usuario.longitud,
-            productos=request.productos
+            productos=productos_corregidos
         )
         resultados.sort(key=lambda x: x["total_viaje"])
-        return {"resultados": resultados}
+        
+        return {
+            "resultados": resultados,
+            "productos_detectados": productos_corregidos # Para que el usuario vea qué entendió el sistema
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -7,11 +7,11 @@ Este proyecto es una solución tecnológica diseñada para ayudar a los usuarios
 ## 🚀 Estado Actual del Proyecto
 
 Actualmente, el proyecto es **100% funcional de extremo a extremo (End-to-End)**, contando con las siguientes piezas:
-1. **Limpieza e Ingesta de Datos (Optimizada):** El sistema procesa CSVs masivos de PROFECO aplicando correcciones automáticas de encoding (ej: corregir "Atén" a "Atún", "Maöz" a "Maíz") y combinando productos con su presentación para búsquedas precisas. Utiliza "Upserts" en MongoDB para evitar duplicados.
-2. **Infraestructura:** MongoDB en Docker con índices espaciales (`2dsphere`) y de búsqueda por palabras clave.
-3. **API Backend:** Servidor FastAPI que soporta **cantidades y unidades** (ej: "6 litros leche", "2kg jitomate"). Extrae marcas específicas y realiza cálculos matemáticos de subtotales por sucursal.
-4. **Frontend:** Interfaz interactiva (Dark Mode) que muestra un **desglose detallado** de cada producto encontrado, su precio unitario, cantidad y el costo de gasolina hacia la sucursal.
-5. **CI/CD y Testing (Integrado):** Se implementó integración continua usando GitHub Actions con validaciones automatizadas de sintaxis y pruebas unitarias usando `Pytest`.
+1. **Limpieza e Ingesta de Datos (Inteligente):** El sistema procesa CSVs masivos de PROFECO aplicando correcciones automáticas de encoding y combinando producto + presentación + marca para crear un **Índice de Texto** de búsqueda flexible.
+2. **Infraestructura:** MongoDB en Docker con índices espaciales (`2dsphere`) y un **Text Index** optimizado para español que permite encontrar productos incluso con ligeros errores de escritura.
+3. **API Backend:** Servidor FastAPI con **Cerebro de Corrección (Gemini)**. Antes de buscar en la DB, el sistema usa IA para normalizar typos (ej: "gitomate" -> "jitomate") y extraer cantidades.
+4. **Frontend:** Interfaz interactiva (Dark Mode) con desglose detallado, incluyendo distancias reales y cálculo de gasolina.
+5. **CI/CD y Testing:** Pipeline automatizado con GitHub Actions y pruebas unitarias con `Pytest`.
 
 ---
 
@@ -125,6 +125,46 @@ Carpeta utilizada para validar algoritmos de forma aislada antes de integrarlos 
 
 ---
 
+## 📊 Estructura del Dataset (PROFECO)
+
+El sistema procesa e indexa las siguientes 10 columnas clave para garantizar precisión y ahorro:
+
+| Columna | Descripción | Uso en el Sistema |
+| :--- | :--- | :--- |
+| **`producto`** | Nombre base del artículo | Identificación primaria. |
+| **`presentacion`** | Gramaje o medida (ej: 1 Kg, 900ml) | Diferenciación de precios unitarios. |
+| **`marca`** | Fabricante (ej: Lala, Alpura) | Búsqueda específica solicitada por el usuario. |
+| **`categoria`** | Clasificación oficial | Organización y filtrado. |
+| **`precio`** | Costo monetario | Base del cálculo de ahorro. |
+| **`fecha_registro`** | Timestamp de captura | Validación de vigencia del precio. |
+| **`cadena_comercial`**| Nombre de la corporación | Agrupación por tienda (Walmart, Chedraui, etc). |
+| **`direccion`** | Ubicación textual | Visualización en los resultados del frontend. |
+| **`latitud / longitud`**| Coordenadas físicas | Cálculo de distancia y costo de gasolina ($geoNear). |
+| **`nombre_simplificado`**| Producto + Marca + Presentación | **Columna calculada** para el Índice de Texto (Fuzzy Search). |
+
+> [!NOTE]
+> Durante la limpieza, el sistema aplica un filtro de **Outliers (IQR_K=10.0)** para eliminar errores de captura en el CSV original, pero protegiendo productos naturalmente caros como cortes de carne o paquetes familiares.
+
+---
+
+## 🧠 Motor de Búsqueda Inteligente (Fuzzy Search)
+
+Para lograr que el sistema entienda consultas informales o con errores, implementamos una estrategia de **dos capas**:
+
+### Capa 1: Normalización con IA (Pre-procesamiento)
+Antes de tocar la base de datos, la lista del usuario (texto o foto) pasa por **Google Gemini 1.5 Flash**. Esta capa se encarga de:
+*   **Corrección Ortográfica:** Convierte "gitomate" en "jitomate".
+*   **Detección de Entidades:** Separa la cantidad (6), la unidad (litros), la marca (lala) y el producto (leche).
+*   **Estandarización:** Convierte términos informales en nombres que tienen mayor probabilidad de existir en el catálogo oficial.
+
+### Capa 2: Índice de Texto en MongoDB (Recuperación)
+Una vez normalizada la consulta, el backend realiza una búsqueda utilizando un **Índice de Texto** configurado en español:
+*   **Independencia de Orden:** "leche lala" o "lala leche" devolverán el mismo resultado.
+*   **Matching Enriquecido:** Al combinar `producto + marca + presentacion` en una sola columna indexada, el sistema puede encontrar "atun dolores lata" aunque esas palabras vengan de 3 columnas distintas del CSV original.
+*   **Filtrado Geoespacial:** Los resultados se limitan en tiempo real a las sucursales dentro del radio de 10km del usuario, ordenando por precio final.
+
+---
+
 ## 🛠️ Cómo correr el sistema completo (Local-First)
 
 1. **Configura tu entorno:**
@@ -159,10 +199,11 @@ Carpeta utilizada para validar algoritmos de forma aislada antes de integrarlos 
 
 ## 💡 Ejemplos de Uso
 
-El sistema es capaz de procesar lenguaje natural tanto en texto como en fotos. Aquí algunos ejemplos de lo que puedes pedir:
+El sistema es capaz de procesar lenguaje natural tanto en texto como en fotos gracias a su **Capa de Corrección con Gemini**. Aquí algunos ejemplos:
 
 *   **Búsquedas con Marca:** "leche lala entera", "atun dolores en aceite".
-*   **Cantidades Específicas:** "6 litros leche alpura", "3 kg jitomate", "2 latas de atun".
-*   **Búsquedas Genéricas:** "huevo", "cebolla", "arroz". (El sistema buscará automáticamente la opción más económica de la categoría).
+*   **Cantidades y Unidades:** "6 litros leche alpura", "3 kg jitomate", "2 latas de atun".
+*   **Flexibilidad (Typos):** "6 latas atun, gitomate, 2 chocorole" (El sistema corregirá "gitomate" a "jitomate" y encontrará los Chocorroles).
+*   **Búsquedas Genéricas:** "huevo", "cebolla", "arroz". (Busca automáticamente la opción más económica de la sucursal).
 
-**Tip:** Si usas la cámara, asegúrate de que la marca y el tamaño sean visibles; la IA de Gemini se encargará de extraer los detalles para que la comparativa sea justa entre tiendas.
+**Tip:** Si usas la cámara, asegúrate de que la marca y el tamaño sean visibles; la IA de Gemini extraerá los detalles para que la comparativa sea justa entre tiendas.
