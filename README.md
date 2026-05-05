@@ -72,13 +72,7 @@ El proyecto ha sido rediseñado utilizando arquitectura de microservicios y una 
  ┣ 📂 tests/                 # 🧪 Pruebas Unitarias Automatizadas
  ┃ ┣ 📜 test_api.py          #   Validación del backend y endpoints
  ┃ ┗ 📜 test_limpieza.py     #   Validación del algoritmo de Pandas
- ┣ 📂 scratch/               # 📓 Scripts de prueba y experimentación (Temporales)
- ┃ ┣ 📜 test_parser.py       #   Validación de la lógica de extracción de cantidades
- ┃ ┣ 📜 check_data.py        #   Verificación de corrección de encoding en DB
- ┃ ┣ 📜 test_real_db.py      #   Simulación de búsqueda con datos reales
- ┃ ┣ 📜 check_store.py       #   Inspección de inventario por sucursal específica
- ┃ ┣ 📜 count.py             #   Conteo de documentos y validación de carga
- ┃ ┗ 📜 test_full_logic.py   #   Prueba integral con mocks de base de datos
+  ┣ 📂 scratch/               # 🧪 Laboratorio: Scripts de prueba y validación
  ┣ 📂 mongo-init/            # 🗄️ Nivel 4: Infraestructura de Base de Datos
  ┃ ┗ 📜 01_init.js           #   Inicialización de Mongo e índices 2dsphere
  ┣ 📂 Datos/                 # 📥 Origen de Datos (Aquí van los CSVs de PROFECO)
@@ -162,6 +156,13 @@ Una vez normalizada la consulta, el backend realiza una búsqueda utilizando un 
 *   **Independencia de Orden:** "leche lala" o "lala leche" devolverán el mismo resultado.
 *   **Matching Enriquecido:** Al combinar `producto + marca + presentacion` en una sola columna indexada, el sistema puede encontrar "atun dolores lata" aunque esas palabras vengan de 3 columnas distintas del CSV original.
 *   **Filtrado Geoespacial:** Los resultados se limitan en tiempo real a las sucursales dentro del radio de 10km del usuario, ordenando por precio final.
+*   **Flexibilidad Fonética:** Implementación de reglas de regex personalizadas para compensar confusiones comunes en español (`g/j`, `s/z/c`, `b/v`, `h` muda y `r/rr`), permitiendo que búsquedas como "arros" o "gitomate" encuentren resultados correctos sin depender exclusivamente de la IA.
+
+### Capa 3: Categorización de Canasta (Optimización)
+El sistema divide los resultados en dos categorías para una mejor decisión de compra:
+1. **Tiendas Completas:** Aquellas que tienen el 100% de los productos solicitados (priorizadas por ahorro).
+2. **Tiendas Incompletas:** Aquellas donde faltan uno o más artículos, marcando claramente qué productos no están disponibles y resaltando el ahorro parcial.
+
 
 ---
 
@@ -207,3 +208,33 @@ El sistema es capaz de procesar lenguaje natural tanto en texto como en fotos gr
 *   **Búsquedas Genéricas:** "huevo", "cebolla", "arroz". (Busca automáticamente la opción más económica de la sucursal).
 
 **Tip:** Si usas la cámara, asegúrate de que la marca y el tamaño sean visibles; la IA de Gemini extraerá los detalles para que la comparativa sea justa entre tiendas.
+
+---
+
+## 🧪 Guía de Scripts de Validación (Laboratorio)
+
+La carpeta `scratch/` contiene utilidades para mantenimiento y pruebas profundas:
+
+*   **Integridad de Datos:**
+    *   `count.py`: Conteo rápido de documentos por colección.
+    *   `inspect_db.py`: Visualización de esquemas y estructuras de datos.
+    *   `check_data.py`: Verifica la limpieza de nombres y corrección de encoding.
+    *   `inspect_atun.py`: Script específico para validar el caso de éxito de "Atén" vs "atun".
+
+*   **Pruebas de Motor de Búsqueda:**
+    *   `test_parser.py`: Valida el extractor de cantidades y unidades (kg, lt, latas).
+    *   `test_phonetic_regex_fixed.py`: Valida las reglas de ortografía flexible (g/j, s/z/c, etc.).
+    *   `test_clean_names.py`: Prueba la eliminación de ruido y distractores en los nombres.
+    *   `test_full_logic.py`: Simulación integral (Corrección -> Parser -> Regex) sin tocar la DB.
+
+*   **Validación con Base de Datos Real:**
+    *   `check_mongo_geo.py`: Prueba de conectividad e índices geoespaciales (`$geoNear`).
+    *   `test_real_db.py`: Búsquedas masivas contra el dataset real de PROFECO.
+    *   `test_real_search.py`: Simulación de búsqueda completa basada en ubicación y cercanía.
+    *   `check_store.py`: Inspección detallada del inventario de una tienda específica.
+
+*   **Diagnóstico de IA (Gemini):**
+    *   `list_gemini_models.py`: Lista los modelos disponibles para tu API Key (ej. v1.5 vs v2.0).
+    *   `test_gemini_api_v3.py`: Prueba de conectividad, cuota y latencia de la API de Google.
+    *   `test_gemini_correction.py`: Valida específicamente el prompt de corrección ortográfica.
+
