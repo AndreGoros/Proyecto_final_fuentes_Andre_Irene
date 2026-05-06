@@ -54,6 +54,17 @@ async def endpoint_optimizar_carrito(request: OptimizeCartRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/v1/extraer-texto-foto")
+async def api_extraer_texto_foto(foto: UploadFile = File(...)):
+    """Solo extrae los productos de la foto para que el usuario los revise."""
+    contenido = await foto.read()
+    mime_type = foto.content_type or "image/jpeg"
+    try:
+        productos = extraer_productos_gemini(contenido, mime_type)
+        return {"productos": productos}
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Error con Gemini: {e}")
+
 @app.post("/api/v1/analizar-foto")
 async def analizar_foto(
     foto: UploadFile = File(..., description="Foto de la lista de compras"),
