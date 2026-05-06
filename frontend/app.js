@@ -17,8 +17,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const uploadArea = document.querySelector('.upload-area');
     const fotoInput = document.getElementById('foto-input');
     const fileNameDisplay = document.getElementById('file-name');
-    const btnExtract = document.getElementById('btn-extract');
-    const extractLoading = document.getElementById('extract-loading');
     const listaTexto = document.getElementById('lista-texto');
 
     uploadArea.addEventListener('click', () => fotoInput.click());
@@ -30,35 +28,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     fotoInput.addEventListener('change', updateFileName);
 
-    btnExtract.addEventListener('click', async () => {
-        if (!fotoInput.files.length) return;
-        btnExtract.classList.add('hidden');
-        extractLoading.classList.remove('hidden');
-        const formData = new FormData();
-        formData.append('foto', fotoInput.files[0]);
-        try {
-            const res = await fetch('/api/v1/extraer-texto-foto', { method: 'POST', body: formData });
-            if (!res.ok) throw new Error('Error al extraer productos');
-            const data = await res.json();
-            const productosExtraidos = data.productos.join(', ');
-            const currentVal = listaTexto.value.trim();
-            listaTexto.value = currentVal ? currentVal + ', ' + productosExtraidos : productosExtraidos;
-            alert('¡Lista extraída! Hemos añadido los productos al cuadro de texto para que los revises o agregues más.');
-            document.querySelector('[data-target="tab-texto"]').click();
-        } catch (err) {
-            alert('Aviso: ' + err.message);
-        } finally {
-            extractLoading.classList.add('hidden');
-        }
-    });
-
     function updateFileName() {
         if (fotoInput.files.length > 0) {
             fileNameDisplay.textContent = fotoInput.files[0].name;
             fileNameDisplay.style.color = '#4ade80';
             document.querySelector('.upload-area i').className = 'fa-solid fa-circle-check';
             document.querySelector('.upload-area i').style.color = '#4ade80';
-            btnExtract.classList.remove('hidden');
         }
     }
 
@@ -94,16 +69,22 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const texto = listaTexto.value;
-        if (!texto) { alert('Escribe algunos productos o usa una foto.'); return; }
-        
-        const productos = texto.split(/,|\n/).map(p => p.trim()).filter(p => p);
-        const endpoint = '/api/v1/optimizar-carrito';
-        const options = { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify({ ubicacion_usuario: { latitud: userLat, longitud: userLon }, productos }) 
-        };
+        let endpoint = '', options = {};
+
+        if (currentInputMode === 'texto') {
+            const texto = listaTexto.value;
+            if (!texto) { alert('Escribe algunos productos.'); return; }
+            const productos = texto.split(/,|\n/).map(p => p.trim()).filter(p => p);
+            endpoint = '/api/v1/optimizar-carrito';
+            options = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ubicacion_usuario: { latitud: userLat, longitud: userLon }, productos }) };
+        } else {
+            if (!fotoInput.files.length) { alert('Selecciona una foto primero.'); return; }
+            const formData = new FormData();
+            formData.append('foto', fotoInput.files[0]);
+            formData.append('latitud', userLat); formData.append('longitud', userLon);
+            endpoint = '/api/v1/analizar-foto';
+            options = { method: 'POST', body: formData };
+        }
 
         loadingOverlay.classList.remove('hidden'); resultsSection.classList.add('hidden');
         try {
