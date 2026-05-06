@@ -170,3 +170,20 @@ textarea:focus { outline: none; border-color: var(--primary); }
     font-style: italic;
 }
 
+
+/* --- Search Tip --- */
+.search-tip {
+    margin-top: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    padding: 0.5rem 0.8rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+}
+.search-tip i {
+    color: var(--primary);
+    font-size: 0.9rem;
+}
