@@ -63,7 +63,8 @@ async def api_extraer_texto_foto(foto: UploadFile = File(...)):
         productos = extraer_productos_gemini(contenido, mime_type)
         return {"productos": productos}
     except Exception as e:
-        raise HTTPException(status_code=422, detail=f"Error con Gemini: {e}")
+        print(f"DEBUG: Error capturado en main.py: {e}")
+        raise HTTPException(status_code=422, detail=f"Error en Gemini: {str(e)}")
 
 @app.post("/api/v1/analizar-foto")
 async def analizar_foto(

@@ -7,7 +7,7 @@ import google.generativeai as genai
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
-    gemini = genai.GenerativeModel("gemini-flash-latest")
+    gemini = genai.GenerativeModel("gemini-1.5-flash")
 else:
     gemini = None
 
@@ -33,16 +33,25 @@ def extraer_productos_gemini(imagen_bytes: bytes, mime_type: str) -> list[str]:
     if not gemini:
         raise ValueError("GEMINI_API_KEY no configurada. Añádela en el archivo .env o en el entorno.")
         
-    imagen_b64 = base64.b64encode(imagen_bytes).decode()
-    response = gemini.generate_content([
-        {"mime_type": mime_type, "data": imagen_b64},
-        PROMPT_GEMINI,
-    ])
-    
-    texto = response.text.strip()
-    texto = re.sub(r"```json|```", "", texto).strip()
-    data = json.loads(texto)
-    return [p.lower().strip() for p in data.get("productos", [])]
+    try:
+        # Codificamos a b64 para la API
+        imagen_part = {"mime_type": mime_type, "data": base64.b64encode(imagen_bytes).decode()}
+        
+        response = gemini.generate_content([PROMPT_GEMINI, imagen_part])
+        
+        if not response or not response.text:
+            print("ERROR: Gemini devolvió una respuesta vacía.")
+            return []
+            
+        texto = response.text.strip()
+        # Limpiar posibles bloques de código markdown
+        texto = re.sub(r"```json|```", "", texto).strip()
+        
+        data = json.loads(texto)
+        return [p.lower().strip() for p in data.get("productos", [])]
+    except Exception as e:
+        print(f"ERROR CRÍTICO en extraer_productos_gemini: {e}")
+        raise e
 
 PROMPT_CORRECCION = """
 Eres un experto en compras. Tu tarea es corregir y normalizar una lista de productos que puede tener errores ortográficos o términos informales.
