@@ -28,40 +28,63 @@ SINONIMOS_BUSQUEDA = {
     "litro":  "lt",
     "kilos":  "kg",
     "kilo":   "kg",
+    "gr":     "g",
+    "gramos": "g",
+    "leches": "leche",
+    "huevos": "huevo",
     "latas":  "lata",
     "paquetes": "paquete",
     "bolsas": "bolsa",
     "frascos": "frasco",
-    "botes": "bote"
+    "botes": "bote",
+    "jitomates": "jitomate",
+    "cebollas": "cebolla"
 }
 
 def parse_product_string(prod_str: str):
     """
-    Intenta extraer la cantidad al inicio de la cadena y limpia unidades comunes.
+    Extrae cantidad y normaliza unidades (ej: 500gr -> 0.5kg).
     """
     prod_str = remove_accents(prod_str.strip().lower())
     
-    # 1. Extraer cantidad
-    cantidad = 1
-    match = re.match(r"^(\d+)\s*[xX*]?\s*(.*)$", prod_str)
+    # 1. Detectar cantidad y posible unidad pegada (ej: 500gr, 2lt)
+    cantidad = 1.0
+    match = re.match(r"^(\d+(?:\.\d+)?)\s*([a-zA-Z]*)\s*[xX*]?\s*(.*)$", prod_str)
+    
     if match:
+        num_str = match.group(1)
+        unit_str = match.group(2).lower()
+        rest_str = match.group(3)
+        
         try:
-            cantidad = int(match.group(1))
-            prod_str = match.group(2)
+            cantidad = float(num_str)
+            # Si la unidad es gramos, convertimos a fracción de kilo (el precio suele ser por kg)
+            if unit_str in ["gr", "g", "gramos"]:
+                cantidad = cantidad / 1000.0
+                prod_str = rest_str
+            elif unit_str in ["kg", "kilos", "kilo"]:
+                prod_str = rest_str
+            elif unit_str in ["lt", "litro", "litros", "l"]:
+                prod_str = rest_str
+            else:
+                # Si no es una unidad de peso/volumen, podría ser una unidad de conteo (ej: 2 latas)
+                # O simplemente el nombre del producto empezaba con letras
+                if unit_str:
+                    prod_str = unit_str + " " + rest_str
+                else:
+                    prod_str = rest_str
         except ValueError:
             pass
             
-    # 2. Limpiar palabras que son unidades y que a veces no coinciden con la DB
+    # 2. Limpiar palabras irrelevantes y normalizar sinónimos
     palabras = prod_str.split()
     filtradas = []
     for p in palabras:
         if p in PALABRAS_IGNORAR:
             continue
-        # Normalizar unidades (ej. litros -> lt)
         p_norm = SINONIMOS_BUSQUEDA.get(p, p)
         filtradas.append(p_norm)
     
-    # Si al filtrar nos quedamos sin nada (ej. "6 latas"), volvemos al original
     busqueda = " ".join(filtradas) if filtradas else prod_str
     
     return cantidad, busqueda
@@ -126,6 +149,10 @@ async def optimizar_carrito(latitud: float, longitud: float, productos: List[str
             for p in palabras_query:
                 f = p.lower()
                 
+                # Manejo de plurales: si termina en 's', hacerla opcional
+                if f.endswith("s") and len(f) > 3:
+                    f = f[:-1] + "s?"
+                
                 # Reemplazos con placeholders para evitar anidamiento
                 f = f.replace("b", "B").replace("v", "B")
                 f = f.replace("g", "G").replace("j", "G")
@@ -137,6 +164,12 @@ async def optimizar_carrito(latitud: float, longitud: float, productos: List[str
                 # r/rr
                 f = f.replace("rr", "r").replace("r", "r+")
                 
+                # Hack para palabras juntas (ej: piñamiel -> piña.*miel)
+                # Si la palabra es larga y contiene "miel", "pavo", "lala", etc., insertar .*
+                for together in ["miel", "pavo", "lala", "blanco", "negro"]:
+                    if together in f and f != together:
+                        f = f.replace(together, f".*{together}")
+
                 # h opcional solo si no empieza con un grupo o clase
                 if not f.startswith("["):
                     f = "h?" + f
