@@ -96,6 +96,13 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) { alert('Aviso: ' + err.message + '\n\n(Asegúrate de que Docker esté corriendo y Gemini tenga API Key)'); } finally { loadingOverlay.classList.add('hidden'); }
     });
 
+    const modalOverlay = document.getElementById('modal-overlay');
+    const modalBody = document.getElementById('modal-body');
+    const btnCloseModal = document.getElementById('close-modal');
+
+    btnCloseModal.addEventListener('click', () => modalOverlay.classList.add('hidden'));
+    modalOverlay.addEventListener('click', (e) => { if(e.target === modalOverlay) modalOverlay.classList.add('hidden'); });
+
     function renderResults(data) {
         resultsContainer.innerHTML = '';
         const { mejores_completos, mejores_incompletos } = data;
@@ -105,83 +112,87 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (mejores_completos && mejores_completos.length > 0) {
-            const header = document.createElement('div');
-            header.className = 'section-header header-completos';
-            header.innerHTML = '<h3><i class="fa-solid fa-circle-check"></i> Tiendas con Lista Completa</h3><p style="font-size:0.8rem; opacity:0.8">Estas opciones aseguran cubrir todos tus productos al mejor precio.</p>';
-            resultsContainer.appendChild(header);
-            mejores_completos.forEach(res => resultsContainer.appendChild(createCard(res, false)));
-        }
+        const allResults = [
+            ...(mejores_completos || []).map(r => ({...r, type: 'completo'})),
+            ...(mejores_incompletos || []).map(r => ({...r, type: 'incompleto'}))
+        ];
 
-        if (mejores_incompletos && mejores_incompletos.length > 0) {
-            const header = document.createElement('div');
-            header.className = 'section-header header-incompletos';
-            header.innerHTML = '<h3><i class="fa-solid fa-triangle-exclamation"></i> Otras Opciones (Incompletas)</h3>';
-            resultsContainer.appendChild(header);
-
-            const warning = document.createElement('div');
-            warning.className = 'warning-box';
-            warning.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> AVISO: Las siguientes opciones no aseguran cubrir la lista completa.';
-            resultsContainer.appendChild(warning);
-            mejores_incompletos.forEach(res => resultsContainer.appendChild(createCard(res, true)));
-        }
+        allResults.forEach((res, index) => {
+            const card = createMiniCard(res, index === 0 && res.type === 'completo');
+            card.addEventListener('click', () => openModal(res));
+            resultsContainer.appendChild(card);
+        });
     }
 
-    function createCard(res, isIncompleto) {
+    function createMiniCard(res, isRecommended) {
         const card = document.createElement('div');
-        card.className = 'card';
+        card.className = `card-mini ${isRecommended ? 'recommended' : ''} ${res.type === 'incompleto' ? 'incompleto' : ''}`;
+        
+        card.innerHTML = `
+            <div>
+                <div style="font-size: 0.7rem; color: var(--primary); font-weight: 800; margin-bottom: 0.2rem;">
+                    ${res.type === 'completo' ? 'LISTA COMPLETA' : 'INCOMPLETO'}
+                </div>
+                <h3>${res.cadena}</h3>
+                <div class="dist">${res.sucursal.substring(0, 25)}...</div>
+            </div>
+            <div>
+                <div class="price">$${res.total_viaje.toFixed(0)}</div>
+                <div class="dist">${res.distancia_km.toFixed(1)} km</div>
+            </div>
+        `;
+        return card;
+    }
 
+    function openModal(res) {
         const listaProdHTML = res.productos_encontrados.map(p => `
             <div class="product-item">
                 <span><small>${p.cantidad}x</small> ${p.producto}</span>
-                <span style="font-weight:600">$${p.precio_total.toFixed(2)}</span>
+                <b style="color:#4ade80">$${p.precio_total.toFixed(2)}</b>
             </div>
             <div style="font-size:0.7rem; color:var(--text-muted); margin-bottom:0.6rem; text-align:right">u: $${p.precio_unitario.toFixed(2)}</div>
         `).join('');
 
-        const faltantesHTML = isIncompleto ? `
-            <div class="missing-items">
-                <h4><i class="fa-solid fa-circle-xmark"></i> Faltantes:</h4>
-                <div class="missing-list">${res.productos_no_encontrados.join(', ')}</div>
+        const faltantesHTML = res.type === 'incompleto' ? `
+            <div class="missing-items" style="margin-top:1rem; padding:1rem; background:rgba(248,113,113,0.1); border-radius:10px;">
+                <h4 style="color:#f87171"><i class="fa-solid fa-circle-xmark"></i> Faltantes:</h4>
+                <div class="missing-list" style="color:#fca5a5">${res.productos_no_encontrados.join(', ')}</div>
             </div>
         ` : '';
 
-        card.innerHTML = `
-            <div class="card-top">
-                <div class="store-info">
-                    <h3><i class="fa-solid fa-shop"></i> ${res.cadena}</h3>
-                    <div class="store-details">
-                        <div style="margin-bottom: 0.3rem;"><i class="fa-solid fa-location-dot"></i> ${res.sucursal}</div>
-                        <div style="font-size: 0.75rem; opacity: 0.8; margin-bottom: 0.5rem; line-height: 1.2;"><i class="fa-solid fa-map-pin"></i> ${res.direccion}</div>
-                        <span><i class="fa-solid fa-road"></i> ${res.distancia_km.toFixed(1)} km</span>
-                    </div>
-                </div>
-                <div class="price-info">
-                    <div class="total-price">$${res.total_viaje.toFixed(2)}</div>
-                    <div class="sub-price">Total estimado (incl. viaje)</div>
-                </div>
+        modalBody.innerHTML = `
+            <div style="text-align:center; margin-bottom:2rem;">
+                <h2 style="font-size:2rem; margin-bottom:0.5rem;">${res.cadena}</h2>
+                <p style="color:var(--text-muted)"><i class="fa-solid fa-location-dot"></i> ${res.sucursal}</p>
+                <p style="font-size:0.8rem; opacity:0.7;">${res.direccion}</p>
             </div>
 
-            <div class="card-content">
-                <div class="products-found">
-                    <h4><i class="fa-solid fa-check-double"></i> Productos Encontrados:</h4>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2rem;">
+                <div>
+                    <h4 style="margin-bottom:1rem;"><i class="fa-solid fa-check-double"></i> Detalle de Compra</h4>
                     ${listaProdHTML}
+                    ${faltantesHTML}
                 </div>
-                
-                <div class="summary-side">
-                    <div class="cost-breakdown" style="font-size: 0.85rem; padding:1rem; background:rgba(255,255,255,0.05); border-radius:10px;">
-                        <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.5rem">
-                            <span>🛒 Carro:</span> <b>$${res.subtotal_productos.toFixed(2)}</b>
+                <div style="display:flex; flex-direction:column; gap:1rem;">
+                    <div class="glass-panel" style="padding:1.5rem; text-align:center;">
+                        <div style="font-size:0.9rem; color:var(--text-muted);">Total Estimado</div>
+                        <div style="font-size:3rem; font-weight:800; color:#4ade80;">$${res.total_viaje.toFixed(2)}</div>
+                    </div>
+                    <div style="padding:1rem; background:rgba(255,255,255,0.05); border-radius:10px; font-size:0.9rem;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+                            <span>🛒 Subtotal:</span> <b>$${res.subtotal_productos.toFixed(2)}</b>
                         </div>
-                        <div style="display:flex; justify-content:space-between">
+                        <div style="display:flex; justify-content:space-between;">
                             <span>⛽ Gasolina:</span> <b>$${res.costo_gasolina.toFixed(2)}</b>
                         </div>
+                        <div style="display:flex; justify-content:space-between; border-top:1px solid rgba(255,255,255,0.1); padding-top:0.5rem; margin-top:0.5rem;">
+                            <span>📍 Distancia:</span> <b>${res.distancia_km.toFixed(1)} km</b>
+                        </div>
                     </div>
-                    
-                    ${faltantesHTML}
                 </div>
             </div>
         `;
-        return card;
+
+        modalOverlay.classList.remove('hidden');
     }
 });
