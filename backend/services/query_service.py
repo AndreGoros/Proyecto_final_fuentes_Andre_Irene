@@ -171,11 +171,8 @@ async def optimizar_carrito(latitud: float, longitud: float, productos: List[str
                 precio_unitario = item["precio"]
                 precio_total = round(precio_unitario * cantidad, 2)
                 
-                # Limpieza estética del nombre del producto
-                nombre_mostrado = item["producto"].replace("atén", "atún").replace("tehuacµn", "tehuacán")
-
                 productos_encontrados.append({
-                    "producto":        nombre_mostrado,
+                    "producto":        item["producto"],
                     "precio_unitario": precio_unitario,
                     "cantidad":        cantidad,
                     "precio_total":    precio_total,

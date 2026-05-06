@@ -127,20 +127,36 @@ _RE_EXTRA    = re.compile(r"[^\w\s]")
  
 # Mapeo de corrupciones de caracteres comunes en CSV de PROFECO
 MAPA_CORRECCION = {
-    "atén": "atun",
-    "maöz": "maiz",
-    "azécar": "azucar",
-    "hémeda": "humeda",
-    "cµpsulas": "capsulas",
+    "atén": "atún",
+    "maöz": "maíz",
+    "azécar": "azúcar",
+    "hémeda": "húmeda",
+    "cµpsulas": "cápsulas",
     "tama¥o": "tamaño",
     "jos©": "jose",
     "m xico": "mexico",
-    "jamàn": "jamon",
-    "clµsico": "clasico",
+    "jamàn": "jamón",
+    "clµsico": "clásico",
+    "pi¥a": "piña",
+    "piïa": "piña",
+    "tiburàn": "tiburón",
+    "piquön": "piquín",
+    "fàrmula": "fórmula",
+    "àn": "ón",
+    "ö": "í",
+    "µ": "a",
+    "¥": "ñ",
+    "à": "ó",
 }
 
+import unicodedata
+
+def remove_accents(text: str) -> str:
+    if not text: return ""
+    return ''.join(c for c in unicodedata.normalize('NFD', text) if unicodedata.category(c) != 'Mn')
+
 def _limpiar_str(s: str) -> str:
-    """Normaliza a minúsculas, corrige encoding y quita espacios dobles."""
+    """Corrige encoding, quita espacios dobles pero conserva minúsculas/acentos corregidos."""
     text = str(s).strip().lower()
     for corrupto, corregido in MAPA_CORRECCION.items():
         text = text.replace(corrupto, corregido)
@@ -157,14 +173,10 @@ def normalizar_cadena(raw: str) -> str | None:
  
 def simplificar_nombre(nombre: str) -> str:
     """
-    Normaliza el nombre conservando marcas, tipos y medidas.
-    Ejemplo: 'LECHE PASTEURIZADA LALA 1L' → 'leche pasteurizada lala 1l'.
-    Reglas:
-      - Normaliza a minúsculas y quita espacios dobles
-      - Elimina caracteres especiales
-      - Conserva todas las palabras significativas
+    Normaliza el nombre quitando acentos para facilitar el matching.
     """
     s = _limpiar_str(nombre)
+    s = remove_accents(s)
     s = _RE_EXTRA.sub("", s)
     palabras = [p for p in s.split() if len(p) > 1]
     return " ".join(palabras)
@@ -236,21 +248,26 @@ def limpiar(df: pd.DataFrame) -> pd.DataFrame:
     df = df[df["LATITUD"].notna() & df["LONGITUD"].notna()].copy()
     log.info("  Coordenadas inválidas: %d filas descartadas", antes - len(df))
  
-    # 4. Nombre simplificado para Gemini (Combina Producto, Presentación y Marca)
-    # Rellenamos nulos en caso de que falten
-    p_prod = df["Producto"].fillna("")
-    p_pres = df["presentacion"].fillna("") if "presentacion" in df.columns else ""
-    p_marc = df["marca"].fillna("") if "marca" in df.columns else ""
-    
-    df["nombre_simplificado"] = (p_prod + " " + p_pres + " " + p_marc).apply(simplificar_nombre)
+    # 4. Limpiar columnas originales para visualización (Producto, Marca, Presentación)
+    for col_name in ["Producto", "marca", "presentacion"]:
+        if col_name in df.columns:
+            df[col_name] = df[col_name].fillna("").apply(_limpiar_str)
+
+    # 5. Nombre simplificado para Gemini (Combina Producto, Presentación y Marca)
+    # Ya están limpios por el paso anterior
+    df["nombre_simplificado"] = (
+        df["Producto"] + " " + 
+        (df["presentacion"] if "presentacion" in df.columns else "") + " " + 
+        (df["marca"] if "marca" in df.columns else "")
+    ).apply(simplificar_nombre)
  
-    # 5. Descarte de columnas de ruido
+    # 6. Descarte de columnas de ruido
     cols_a_eliminar = [c for c in COLUMNAS_DESCARTADAS if c in df.columns]
     df = df.drop(columns=cols_a_eliminar)
     if cols_a_eliminar:
         log.info("  Columnas descartadas: %s", cols_a_eliminar)
  
-    # 6. Renombrar para consistencia de documento
+    # 7. Renombrar para consistencia de documento
     df = df.rename(columns={
         "Cadena":   "cadena_raw",
         "Producto": "producto",
@@ -261,8 +278,8 @@ def limpiar(df: pd.DataFrame) -> pd.DataFrame:
     df["cadena"] = df["cadena_norm"]
     df = df.drop(columns=["cadena_norm"])
  
-    # 7. Convertir todas las columnas de texto a minúsculas
-    cols_texto = ["cadena", "cadena_raw", "producto", "nombre_simplificado"]
+    # 8. Convertir todas las columnas de texto a minúsculas
+    cols_texto = ["cadena", "cadena_raw", "producto", "nombre_simplificado", "marca", "presentacion"]
     for c in cols_texto:
         if c in df.columns:
             df[c] = df[c].astype(str).str.lower().str.strip()
