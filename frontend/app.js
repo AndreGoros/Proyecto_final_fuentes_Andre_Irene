@@ -151,7 +151,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="store-info">
                     <h3><i class="fa-solid fa-shop"></i> ${res.cadena}</h3>
                     <div class="store-details">
-                        <span><i class="fa-solid fa-location-dot"></i> ${res.sucursal}</span>
+                        <div style="margin-bottom: 0.3rem;"><i class="fa-solid fa-location-dot"></i> ${res.sucursal}</div>
+                        <div style="font-size: 0.75rem; opacity: 0.8; margin-bottom: 0.5rem; line-height: 1.2;"><i class="fa-solid fa-map-pin"></i> ${res.direccion}</div>
                         <span><i class="fa-solid fa-road"></i> ${res.distancia_km.toFixed(1)} km</span>
                     </div>
                 </div>
