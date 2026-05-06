@@ -38,7 +38,10 @@ SINONIMOS_BUSQUEDA = {
     "frascos": "frasco",
     "botes": "bote",
     "jitomates": "jitomate",
-    "cebollas": "cebolla"
+    "cebollas": "cebolla",
+    "un": "1",
+    "una": "1",
+    "uno": "1"
 }
 
 def parse_product_string(prod_str: str):
@@ -62,6 +65,12 @@ def parse_product_string(prod_str: str):
             if unit_str in ["gr", "g", "gramos"]:
                 cantidad = cantidad / 1000.0
                 prod_str = rest_str
+            elif unit_str in ["oz", "onza", "onzas"]:
+                cantidad = cantidad * 0.02835
+                prod_str = rest_str
+            elif unit_str in ["lb", "libra", "libras"]:
+                cantidad = cantidad * 0.4536
+                prod_str = rest_str
             elif unit_str in ["kg", "kilos", "kilo"]:
                 prod_str = rest_str
             elif unit_str in ["lt", "litro", "litros", "l"]:
@@ -83,6 +92,9 @@ def parse_product_string(prod_str: str):
         if p in PALABRAS_IGNORAR:
             continue
         p_norm = SINONIMOS_BUSQUEDA.get(p, p)
+        # Manejo de "un", "una" como cantidad 1
+        if p_norm in ["un", "una", "uno"]:
+            continue
         filtradas.append(p_norm)
     
     busqueda = " ".join(filtradas) if filtradas else prod_str
