@@ -36,7 +36,7 @@ def extraer_productos_gemini(imagen_bytes: bytes, mime_type: str) -> list[str]:
     try:
         # En el nuevo SDK genai, pasamos el modelo y los contenidos directamente
         response = client.models.generate_content(
-            model="gemini-1.5-flash",
+            model="gemini-flash-latest",
             contents=[
                 types.Part.from_bytes(data=imagen_bytes, mime_type=mime_type),
                 PROMPT_GEMINI
@@ -79,7 +79,7 @@ def corregir_lista_texto(texto_usuario: str) -> list[str]:
         
     try:
         response = client.models.generate_content(
-            model="gemini-1.5-flash",
+            model="gemini-flash-latest",
             contents=f"{PROMPT_CORRECCION}\n\nLISTA: {texto_usuario}"
         )
         texto = response.text.strip()
