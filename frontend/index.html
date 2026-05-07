@@ -20,51 +20,53 @@
             <p>Encuentra el súper más barato, considerando tu viaje</p>
         </header>
 
-        <main class="glass-panel">
-            <div class="location-section">
-                <button id="btn-location" class="btn-secondary">
-                    <i class="fa-solid fa-location-crosshairs"></i> Obtener mi ubicación
+        <div class="app-layout">
+            <main class="glass-panel input-section">
+                <div class="location-section">
+                    <button id="btn-location" class="btn-secondary">
+                        <i class="fa-solid fa-location-crosshairs"></i> Obtener mi ubicación
+                    </button>
+                    <span id="location-status" class="status-text">📍 Ubicación pendiente...</span>
+                </div>
+
+                <div class="tabs">
+                    <button class="tab-btn active" data-target="tab-texto"><i class="fa-solid fa-pen-to-square"></i> Escribir Lista</button>
+                    <button class="tab-btn" data-target="tab-foto"><i class="fa-solid fa-camera"></i> Subir Foto</button>
+                </div>
+
+                <div class="tab-content active" id="tab-texto">
+                    <p class="instruction">Escribe los productos separados por comas:</p>
+                    <textarea id="lista-texto" placeholder="Ej. leche lala deslactosada 1l, pan bimbo blanco, huevo san juan 18 piezas..."></textarea>
+                    <div class="search-tip">
+                        <i class="fa-solid fa-circle-info"></i>
+                        <span>Si no especificas marca, buscaremos el más barato. Sin unidad, se asume 1 (pza/kg/lt).</span>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="tab-foto">
+                    <p class="instruction">Sube una foto de tu lista de compras del refri:</p>
+                    <div class="file-upload">
+                        <input type="file" id="foto-input" accept="image/*" hidden>
+                        <label for="foto-input" class="upload-area">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                            <span>Haz clic o arrastra tu foto aquí</span>
+                        </label>
+                        <p id="file-name" class="file-name"></p>
+                    </div>
+                </div>
+
+                <button id="btn-calcular" class="btn-primary">
+                    <i class="fa-solid fa-calculator"></i> Calcular Mejor Opción
                 </button>
-                <span id="location-status" class="status-text">📍 Ubicación pendiente...</span>
-            </div>
+            </main>
 
-            <div class="tabs">
-                <button class="tab-btn active" data-target="tab-texto"><i class="fa-solid fa-pen-to-square"></i> Escribir Lista</button>
-                <button class="tab-btn" data-target="tab-foto"><i class="fa-solid fa-camera"></i> Subir Foto</button>
-            </div>
-
-            <div class="tab-content active" id="tab-texto">
-                <p class="instruction">Escribe los productos separados por comas:</p>
-                <textarea id="lista-texto" placeholder="Ej. leche lala deslactosada 1l, pan bimbo blanco, huevo san juan 18 piezas..."></textarea>
-                <div class="search-tip">
-                    <i class="fa-solid fa-circle-info"></i>
-                    <span>Si no especificas marca, buscaremos el más barato. Sin unidad, se asume 1 (pza/kg/lt).</span>
+            <section id="results-section" class="results-section hidden">
+                <h2>🏆 Resultados</h2>
+                <div id="results-container" class="results-grid">
+                    <!-- Cards generadas por JS -->
                 </div>
-            </div>
-
-            <div class="tab-content" id="tab-foto">
-                <p class="instruction">Sube una foto de tu lista de compras del refri:</p>
-                <div class="file-upload">
-                    <input type="file" id="foto-input" accept="image/*" hidden>
-                    <label for="foto-input" class="upload-area">
-                        <i class="fa-solid fa-cloud-arrow-up"></i>
-                        <span>Haz clic o arrastra tu foto aquí</span>
-                    </label>
-                    <p id="file-name" class="file-name"></p>
-                </div>
-            </div>
-
-            <button id="btn-calcular" class="btn-primary">
-                <i class="fa-solid fa-calculator"></i> Calcular Mejor Opción
-            </button>
-        </main>
-
-        <section id="results-section" class="results-section hidden">
-            <h2>🏆 Resultados</h2>
-            <div id="results-container" class="results-grid">
-                <!-- Cards generadas por JS -->
-            </div>
-        </section>
+            </section>
+        </div>
         
         <!-- Modal for Zoomed Result -->
         <div id="modal-overlay" class="modal-overlay hidden">
