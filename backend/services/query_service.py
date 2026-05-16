@@ -187,10 +187,15 @@ async def optimizar_carrito(latitud: float, longitud: float, productos: List[str
                 lookaheads.append(f"(?=.*{re.escape(raiz)})")
 
             # Exclusiones contextuales: evitar falsos positivos (ej: "crema" != "crema dental")
+            # PERO solo si el usuario NO pidió explícitamente ese término
+            # Ej: "crema dental" -> la palabra "dental" está en la query, NO excluir
             exclusiones = []
             for p in palabras_query:
                 for excluido in EXCLUSIONES_CONTEXTUALES.get(p, []):
-                    exclusiones.append(f"(?!.*{re.escape(excluido)})")
+                    # Solo excluir si el término excluido NO forma parte de lo que el usuario pidió
+                    if excluido not in termino_busqueda.lower():
+                        exclusiones.append(f"(?!.*{re.escape(excluido)})")
+
 
             regex_pattern = "".join(exclusiones) + "".join(lookaheads) + ".*"
             print(f"  DEBUG: Buscando '{prod_original}' -> Term: '{termino_busqueda}' -> Regex: '{regex_pattern}'")
