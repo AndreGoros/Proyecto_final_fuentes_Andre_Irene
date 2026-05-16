@@ -296,8 +296,9 @@ def limpiar(df: pd.DataFrame) -> pd.DataFrame:
         df = df.sort_values("fecha_registro_dt", ascending=True)
         df = df.drop(columns=["fecha_registro_dt"])
     
-    # La llave de unicidad es la dirección física de la sucursal + el nombre del producto
-    df = df.drop_duplicates(subset=["direccion", "producto"], keep="last")
+    # La llave de unicidad es: dirección + producto + marca + presentación
+    # Esto evita borrar diferentes marcas del mismo tipo de producto en la misma tienda.
+    df = df.drop_duplicates(subset=["direccion", "producto", "marca", "presentacion"], keep="last")
     log.info("  Deduplicación por sucursal: %d → %d filas (eliminados %d)", antes, len(df), antes - len(df))
 
     log.info("  Pipeline completado: %d documentos listos", len(df))
