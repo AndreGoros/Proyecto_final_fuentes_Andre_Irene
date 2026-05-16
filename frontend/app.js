@@ -1,17 +1,17 @@
-// ── Logos de cadenas (usando Google Favicon CDN + fallback emoji) ────────────
+// ── Logos de cadenas (imágenes locales en /imagenes/) ───────────────────────
 const CHAIN_CONFIG = {
-    'walmart':          { logo: 'https://logo.clearbit.com/walmart.com.mx',    color: '#0071ce', emoji: '🛒' },
-    'chedraui':         { logo: 'https://logo.clearbit.com/chedraui.com.mx',   color: '#e31837', emoji: '🛒' },
-    'soriana':          { logo: 'https://logo.clearbit.com/soriana.com',        color: '#009444', emoji: '🛒' },
-    'costco':           { logo: 'https://logo.clearbit.com/costco.com.mx',      color: '#005daa', emoji: '🏪' },
-    'bodega aurrera':   { logo: 'https://logo.clearbit.com/bodegaaurrera.com.mx', color: '#f5a623', emoji: '🛒' },
-    'aurrera':          { logo: 'https://logo.clearbit.com/bodegaaurrera.com.mx', color: '#f5a623', emoji: '🛒' },
-    'sam\'s club':      { logo: 'https://logo.clearbit.com/samsclub.com.mx',    color: '#0071ce', emoji: '🏪' },
-    'superama':         { logo: 'https://logo.clearbit.com/walmart.com.mx',    color: '#6dae43', emoji: '🥦' },
-    'la comer':         { logo: 'https://logo.clearbit.com/lacomer.com.mx',    color: '#e6001e', emoji: '🛒' },
-    'city market':      { logo: 'https://logo.clearbit.com/citymarket.com.mx', color: '#a0262a', emoji: '🛒' },
-    'fresko':           { logo: 'https://logo.clearbit.com/lacomer.com.mx',    color: '#78b83a', emoji: '🥬' },
-    'mega':             { logo: 'https://logo.clearbit.com/soriana.com',        color: '#e31837', emoji: '🛒' },
+    'walmart':          { logo: '/imagenes/Walmart_logo.png',   color: '#0071ce', emoji: '🛒' },
+    'bodega aurrera':   { logo: '/imagenes/Walmart_logo.png',   color: '#f5a623', emoji: '🛒' },
+    'aurrera':          { logo: '/imagenes/Walmart_logo.png',   color: '#f5a623', emoji: '🛒' },
+    'superama':         { logo: '/imagenes/Walmart_logo.png',   color: '#6dae43', emoji: '🥦' },
+    'sam\'s club':      { logo: '/imagenes/Walmart_logo.png',   color: '#0071ce', emoji: '🏪' },
+    'chedraui':         { logo: '/imagenes/Chedraui_logo.png',  color: '#e31837', emoji: '🛒' },
+    'soriana':          { logo: '/imagenes/Soriana_logo.png',   color: '#009444', emoji: '🛒' },
+    'mega':             { logo: '/imagenes/Soriana_logo.png',   color: '#e31837', emoji: '🛒' },
+    'la comer':         { logo: '/imagenes/LaComer_logo.png',   color: '#e6001e', emoji: '🛒' },
+    'city market':      { logo: '/imagenes/LaComer_logo.png',   color: '#a0262a', emoji: '🛒' },
+    'fresko':           { logo: '/imagenes/LaComer_logo.png',   color: '#78b83a', emoji: '🥬' },
+    'costco':           { logo: null,                            color: '#005daa', emoji: '🏪' },
 };
 
 function getChainConfig(cadena) {
