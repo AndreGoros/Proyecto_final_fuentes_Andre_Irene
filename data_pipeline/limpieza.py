@@ -26,6 +26,10 @@ from typing import Any
 import pandas as pd
 from pymongo import MongoClient, GEOSPHERE, UpdateOne
 from pymongo.collection import Collection
+from dotenv import load_dotenv
+
+# Cargar variables de entorno desde .env (incluye MONGO_URI de Atlas)
+load_dotenv()
  
 # ---------------------------------------------------------------------------
 # Configuración global
@@ -113,7 +117,7 @@ IQR_K = 10.0
  
 # Configuración MongoDB por defecto (sobreescribible vía argumentos CLI)
 MONGO_URI_DEFAULT    = os.getenv("MONGO_URI", "mongodb://pipeline_user:pipeline1234@localhost:27017/precios_db?authSource=admin")
-MONGO_DB_DEFAULT     = os.getenv("MONGO_DB", "precios_db")
+MONGO_DB_DEFAULT     = os.getenv("MONGO_DB", os.getenv("MONGO_DB_NAME", "precios_db"))
 MONGO_COL_DEFAULT    = os.getenv("MONGO_COLLECTION", "precios")
 BATCH_SIZE           = 1_000          # documentos por insert_many
  

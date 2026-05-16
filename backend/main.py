@@ -116,9 +116,6 @@ async def analizar_foto(
         raise HTTPException(status_code=500, detail=f"Error consultando DB: {e}")
 
 # Servir Frontend estático
-import os
-from fastapi.staticfiles import StaticFiles
-
 # Intentar primero la ruta de Docker (donde frontend está al lado de main.py)
 frontend_dir_docker = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend")
 # Intentar la ruta local (donde frontend está un nivel arriba)
