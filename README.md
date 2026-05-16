@@ -177,6 +177,42 @@ El sistema divide los resultados en dos categorías para una mejor decisión de 
 
 ---
 
+## 💻 Guía de Inicio (Local)
+
+Sigue estos pasos para correr el sistema en tu computadora de forma unificada (Frontend + Backend):
+
+### 1. Configuración de Entorno
+Crea tu entorno virtual e instala las dependencias:
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r backend/requirements.txt
+pip install -r data_pipeline/requirements.txt
+```
+
+### 2. Variables de Entorno
+Copia la plantilla y configura tu `GEMINI_API_KEY` y tu `MONGO_URI`:
+```bash
+cp .env.example .env
+```
+
+### 3. Procesamiento de Datos (PROFECO)
+Coloca tus archivos CSV en la carpeta `Datos/` y corre el pipeline de limpieza (ahora con deduplicación automática):
+```bash
+# Este comando limpia los datos (71% de ahorro) y los sube a Mongo
+python data_pipeline/limpieza.py
+```
+
+### 4. Ejecución Unificada
+Ya no necesitas arrancar el frontend por separado. El backend sirve todo en el puerto 8080:
+```bash
+cd backend
+uvicorn main:app --port 8080 --reload
+```
+Accede a: **`http://localhost:8080`**
+
+---
+
 ## 🚀 Despliegue a Producción (Cloud Run)
 
 Este proyecto está diseñado para funcionar sin las limitaciones de `ngrok` o `localhost`.
