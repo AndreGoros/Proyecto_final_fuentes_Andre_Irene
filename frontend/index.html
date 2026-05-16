@@ -7,6 +7,15 @@
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#00d4aa" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="CanastaAI" />
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
 </head>
 <body>
     <div class="background-blobs">
@@ -86,5 +95,31 @@
     </div>
 
     <script src="app.js"></script>
+    
+    <!-- Service Worker para PWA -->
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", async () => {
+          try {
+            const registration = await navigator.serviceWorker.register(
+              "/service-worker.js",
+              { scope: "/" }
+            );
+            console.log("✅ Service Worker registrado:", registration.scope);
+    
+            registration.addEventListener("updatefound", () => {
+              const newWorker = registration.installing;
+              newWorker.addEventListener("statechange", () => {
+                if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+                  console.log("🔄 Nueva versión disponible. Recarga para actualizar.");
+                }
+              });
+            });
+          } catch (err) {
+            console.warn("Service Worker no disponible:", err);
+          }
+        });
+      }
+    </script>
 </body>
 </html>

@@ -16,10 +16,18 @@ app = FastAPI(
     version="0.1.0",
 )
 
+allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "*")
+
+if allowed_origins_str == "*":
+    allowed_origins = ["*"]
+else:
+    allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",")]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -108,7 +116,17 @@ async def analizar_foto(
         raise HTTPException(status_code=500, detail=f"Error consultando DB: {e}")
 
 # Servir Frontend estático
-base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-frontend_dir = os.path.join(base_dir, "frontend")
-if os.path.exists(frontend_dir):
-    app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+import os
+from fastapi.staticfiles import StaticFiles
+
+# Intentar primero la ruta de Docker (donde frontend está al lado de main.py)
+frontend_dir_docker = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend")
+# Intentar la ruta local (donde frontend está un nivel arriba)
+frontend_dir_local = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
+
+if os.path.exists(frontend_dir_docker):
+    app.mount("/", StaticFiles(directory=frontend_dir_docker, html=True), name="frontend")
+elif os.path.exists(frontend_dir_local):
+    app.mount("/", StaticFiles(directory=frontend_dir_local, html=True), name="frontend")
+else:
+    print("WARNING: No se encontró el directorio frontend ni en local ni en docker path")
