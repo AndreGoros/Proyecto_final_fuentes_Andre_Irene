@@ -124,7 +124,7 @@ async def optimizar_carrito(latitud: float, longitud: float, productos: List[str
             "$group": {
                 "_id": "$location.coordinates",              # Coordenada exacta = Sucursal única
                 "cadena":       {"$first": "$cadena"},
-                "sucursal":     {"$first": "$cadena_raw"},
+                "sucursal":     {"$first": "$cadena"},       # Usamos el nombre normalizado
                 "direccion":    {"$first": "$direccion"},
                 "distancia_mts":{"$first": "$distancia"},
             }
