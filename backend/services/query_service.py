@@ -149,50 +149,24 @@ async def optimizar_carrito(latitud: float, longitud: float, productos: List[str
 
         for prod_original in productos:
             cantidad, termino_busqueda = parse_product_string(prod_original)
-            
-            # Regex: todas las palabras del término de búsqueda deben aparecer
-            palabras_query = [p for p in termino_busqueda.lower().split() if len(p) > 1]
+
+            # Palabras clave: al menos 3 letras, sin stopwords
+            palabras_query = [p for p in termino_busqueda.lower().split() if len(p) >= 3]
             if not palabras_query:
-                # Caso borde: si el string es muy corto, usarlo tal cual
                 palabras_query = [termino_busqueda.lower()]
-                
-            # Flexibilidad fonética para errores comunes en español (g/j, s/z/c, b/v, h muda)
-            palabras_flex = []
+
+            # Construir regex simple: cada palabra debe estar presente en el campo
+            # Se permite que la palabra termine en 's' (plurales simples)
+            lookaheads = []
             for p in palabras_query:
-                f = p.lower()
-                
-                # Manejo de plurales: si termina en 's', hacerla opcional
-                if f.endswith("s") and len(f) > 3:
-                    f = f[:-1] + "s?"
-                
-                # Reemplazos con placeholders para evitar anidamiento
-                f = f.replace("b", "B").replace("v", "B")
-                f = f.replace("g", "G").replace("j", "G")
-                f = f.replace("s", "S").replace("z", "S").replace("c", "S")
-                
-                # Reemplazo final de placeholders
-                f = f.replace("B", "[bv]").replace("G", "[gj]").replace("S", "[szc]")
-                
-                # r/rr
-                f = f.replace("rr", "r").replace("r", "r+")
-                
-                # Hack para palabras juntas (ej: piñamiel -> piña.*miel)
-                # Si la palabra es larga y contiene "miel", "pavo", "lala", etc., insertar .*
-                for together in ["miel", "pavo", "lala", "blanco", "negro"]:
-                    if together in f and f != together:
-                        f = f.replace(together, f".*{together}")
+                # Plurales simples: "lata" también encuentra "latas"
+                if p.endswith("s") and len(p) > 3:
+                    raiz = p[:-1]
+                    lookaheads.append(f"(?=.*{re.escape(raiz)})")
+                else:
+                    lookaheads.append(f"(?=.*{re.escape(p)})")
 
-                # h opcional solo si no empieza con un grupo o clase
-                if not f.startswith("["):
-                    f = "h?" + f
-                
-                palabras_flex.append(f)
-
-            # Evitar distractores comunes si no fueron pedidos explícitamente (ej. evitar 'harina de arroz' si pidió 'arroz')
-            distractores = ["harina", "bebida", "polvo", "galletas"]
-            avoid_regex = "".join([f"(?!.*{d})" for d in distractores if d not in termino_busqueda.lower()])
-            
-            regex_pattern = avoid_regex + "".join([f"(?=.*{p})" for p in palabras_flex]) + ".*"
+            regex_pattern = "".join(lookaheads) + ".*"
             print(f"  DEBUG: Buscando '{prod_original}' -> Term: '{termino_busqueda}' -> Regex: '{regex_pattern}'")
 
             # ── Filtro por coordenada física + producto ─────────
