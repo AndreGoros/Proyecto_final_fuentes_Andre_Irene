@@ -213,17 +213,25 @@ Accede a: **`http://localhost:8080`**
 
 ---
 
-## 🚀 Despliegue a Producción (Cloud Run)
+## 🚀 Despliegue a Producción (Railway + Cloudflare Pages)
 
-Este proyecto está diseñado para funcionar sin las limitaciones de `ngrok` o `localhost`.
+El proyecto cuenta con una arquitectura optimizada para la nube gratuita/económica, separando el backend y el frontend.
 
-1. **Migrar a Atlas:** Sigue las instrucciones de `migrate_to_atlas.sh` para subir tus datos a un clúster gratuito de MongoDB Atlas.
-2. **Configurar .env:** Asegúrate de que `MONGO_URI` apunte a Atlas y `ALLOWED_ORIGINS` tenga tu dominio (o `*`).
-3. **Deploy:**
-   ```bash
-   bash deploy.sh
-   ```
-   El script construirá la imagen, la subirá a Google Container Registry y desplegará el servicio, entregándote una URL pública permanente con HTTPS.
+1. **Migrar a Atlas:**
+   Sube tus datos locales a un clúster gratuito de MongoDB Atlas (puedes usar el script `migrate_to_atlas.sh` como referencia).
+
+2. **Backend (Railway):**
+   * Conecta tu repositorio de GitHub a [Railway](https://railway.app/).
+   * Railway detectará automáticamente el archivo `railway.toml` y `Dockerfile.railway`.
+   * En los *Variables* de Railway, agrega:
+     * `MONGO_URI`: Tu conexión a Atlas.
+     * `GEMINI_API_KEY`: Tu llave de Google Gemini.
+     * `ALLOWED_ORIGINS`: El dominio de tu frontend (ej. `https://tu-app.pages.dev`).
+
+3. **Frontend (Cloudflare Pages):**
+   * Conecta tu repositorio de GitHub a [Cloudflare Pages](https://pages.cloudflare.com/).
+   * Configura el directorio de salida (Output Directory) como `frontend`.
+   * El archivo `frontend/_redirects` se encargará de enrutar las llamadas de `/api/*` hacia tu servidor en Railway. **Importante:** Edita `frontend/_redirects` para colocar la URL real que te asigne Railway.
 
 ---
 
