@@ -1,7 +1,7 @@
 const API_BASE_URL = (() => {
   const { hostname } = window.location;
   if (hostname === "localhost" || hostname === "127.0.0.1") return "http://localhost:8080";
-  return "";
+  return "https://proyectofinalfuentesandreirene-production.up.railway.app";
 })();
 
 // ── Logos de cadenas (imágenes locales en /imagenes/) ───────────────────────
