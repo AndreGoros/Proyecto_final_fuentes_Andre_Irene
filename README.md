@@ -215,23 +215,28 @@ Accede a: **`http://localhost:8080`**
 
 ## 🚀 Despliegue a Producción (Railway + Cloudflare Pages)
 
-El proyecto cuenta con una arquitectura optimizada para la nube gratuita/económica, separando el backend y el frontend.
+El proyecto cuenta con una arquitectura de alta velocidad y cero latencia, separando el Frontend en la red global de Cloudflare Pages y el Backend en Railway.
 
 1. **Migrar a Atlas:**
-   Sube tus datos locales a un clúster gratuito de MongoDB Atlas (puedes usar el script `migrate_to_atlas.sh` como referencia).
+   Sube tus datos locales a un clúster gratuito de MongoDB Atlas (puedes usar el script `migrate_to_atlas.sh` como referencia) y asegúrate de permitir conexiones desde cualquier IP (`0.0.0.0/0`) en la pestaña *Network Access* de Atlas.
 
 2. **Backend (Railway):**
    * Conecta tu repositorio de GitHub a [Railway](https://railway.app/).
-   * Railway detectará automáticamente el archivo `railway.toml` y `Dockerfile.railway`.
-   * En los *Variables* de Railway, agrega:
-     * `MONGO_URI`: Tu conexión a Atlas.
+   * **Importante (Configuración de Directorio):** En la configuración del servicio dentro de la interfaz web de Railway, establece el **Root Directory** a `/backend`.
+   * Railway detectará automáticamente el archivo `backend/railway.toml` e instalará las dependencias.
+   * En los *Variables* de tu servicio FastAPI en Railway, agrega:
+     * `MONGO_URI`: Tu cadena de conexión a Atlas.
      * `GEMINI_API_KEY`: Tu llave de Google Gemini.
-     * `ALLOWED_ORIGINS`: El dominio de tu frontend (ej. `https://tu-app.pages.dev`).
+     * `ALLOWED_ORIGINS`: La URL de tu Frontend (ej. `https://supermarket-comparison.pages.dev`).
 
 3. **Frontend (Cloudflare Pages):**
    * Conecta tu repositorio de GitHub a [Cloudflare Pages](https://pages.cloudflare.com/).
-   * Configura el directorio de salida (Output Directory) como `frontend`.
-   * El archivo `frontend/_redirects` se encargará de enrutar las llamadas de `/api/*` hacia tu servidor en Railway. **Importante:** Edita `frontend/_redirects` para colocar la URL real que te asigne Railway.
+   * Configura las opciones de compilación:
+     * **Framework preset**: `None`
+     * **Root directory (advanced)**: `frontend`
+     * **Build command**: (Dejar vacío)
+     * **Build output directory**: (Dejar vacío)
+   * ¡Listo! El frontend se comunicará directamente con tu servidor de Railway de forma súper rápida y segura mediante CORS.
 
 ---
 
