@@ -1,3 +1,9 @@
+const API_BASE_URL = (() => {
+  const { hostname } = window.location;
+  if (hostname === "localhost" || hostname === "127.0.0.1") return "http://localhost:8080";
+  return "";
+})();
+
 // ── Logos de cadenas (imágenes locales en /imagenes/) ───────────────────────
 const CHAIN_CONFIG = {
     'walmart':          { logo: '/imagenes/Walmart_logo.png',   color: '#0071ce', emoji: '🛒' },
@@ -119,14 +125,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const texto = listaTexto.value;
             if (!texto) { alert('Escribe algunos productos.'); return; }
             const productos = texto.split(/,|\n/).map(p => p.trim()).filter(p => p);
-            endpoint = '/api/v1/optimizar-carrito';
+            endpoint = `${API_BASE_URL}/api/v1/optimizar-carrito`;
             options = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ubicacion_usuario: { latitud: userLat, longitud: userLon }, productos }) };
         } else {
             if (!fotoInput.files.length) { alert('Selecciona una foto primero.'); return; }
             const formData = new FormData();
             formData.append('foto', fotoInput.files[0]);
             formData.append('latitud', userLat); formData.append('longitud', userLon);
-            endpoint = '/api/v1/analizar-foto';
+            endpoint = `${API_BASE_URL}/api/v1/analizar-foto`;
             options = { method: 'POST', body: formData };
         }
 

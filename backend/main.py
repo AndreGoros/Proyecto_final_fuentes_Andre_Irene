@@ -31,7 +31,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/health")
+@app.get("/api/health")
 async def health_check():
     db_ok = await ping_db()
     return {"status": "ok", "mongodb_connected": db_ok}
