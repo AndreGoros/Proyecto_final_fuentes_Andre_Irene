@@ -26,6 +26,10 @@ from typing import Any
 import pandas as pd
 from pymongo import MongoClient, GEOSPHERE, UpdateOne
 from pymongo.collection import Collection
+from dotenv import load_dotenv
+
+# Cargar variables de entorno desde .env (incluye MONGO_URI de Atlas)
+load_dotenv()
  
 # ---------------------------------------------------------------------------
 # Configuración global
@@ -113,7 +117,7 @@ IQR_K = 10.0
  
 # Configuración MongoDB por defecto (sobreescribible vía argumentos CLI)
 MONGO_URI_DEFAULT    = os.getenv("MONGO_URI", "mongodb://pipeline_user:pipeline1234@localhost:27017/precios_db?authSource=admin")
-MONGO_DB_DEFAULT     = os.getenv("MONGO_DB", "precios_db")
+MONGO_DB_DEFAULT     = os.getenv("MONGO_DB", os.getenv("MONGO_DB_NAME", "precios_db"))
 MONGO_COL_DEFAULT    = os.getenv("MONGO_COLLECTION", "precios")
 BATCH_SIZE           = 1_000          # documentos por insert_many
  
@@ -269,21 +273,34 @@ def limpiar(df: pd.DataFrame) -> pd.DataFrame:
  
     # 7. Renombrar para consistencia de documento
     df = df.rename(columns={
-        "Cadena":   "cadena_raw",
         "Producto": "producto",
         "Precio":   "precio",
         "LATITUD":  "latitud",
         "LONGITUD": "longitud",
     })
     df["cadena"] = df["cadena_norm"]
-    df = df.drop(columns=["cadena_norm"])
+    df = df.drop(columns=["cadena_norm", "Cadena"]) # Quitamos Cadena (original) y la temporal
  
     # 8. Convertir todas las columnas de texto a minúsculas
-    cols_texto = ["cadena", "cadena_raw", "producto", "nombre_simplificado", "marca", "presentacion"]
+    cols_texto = ["cadena", "producto", "nombre_simplificado", "marca", "presentacion", "direccion"]
     for c in cols_texto:
         if c in df.columns:
             df[c] = df[c].astype(str).str.lower().str.strip()
  
+    # 9. Deduplicación por Sucursal (Dirección) + Producto
+    # Si hay fecha_registro, ordenamos por ella para quedarnos con el último registro visto
+    antes = len(df)
+    if "fecha_registro" in df.columns:
+        # Asegurar formato fecha para sort correcto
+        df["fecha_registro_dt"] = pd.to_datetime(df["fecha_registro"], errors="coerce")
+        df = df.sort_values("fecha_registro_dt", ascending=True)
+        df = df.drop(columns=["fecha_registro_dt"])
+    
+    # La llave de unicidad es: dirección + producto + marca + presentación
+    # Esto evita borrar diferentes marcas del mismo tipo de producto en la misma tienda.
+    df = df.drop_duplicates(subset=["direccion", "producto", "marca", "presentacion"], keep="last")
+    log.info("  Deduplicación por sucursal: %d → %d filas (eliminados %d)", antes, len(df), antes - len(df))
+
     log.info("  Pipeline completado: %d documentos listos", len(df))
     return df
  
@@ -299,7 +316,6 @@ def a_documentos(df: pd.DataFrame) -> list[dict[str, Any]]:
     Estructura del documento:
     {
         "cadena":             "Walmart",
-        "cadena_raw":         "WALMART SUPERCENTER",
         "producto":           "LECHE PASTEURIZADA LALA 1L",
         "nombre_simplificado":"leche pasteurizada",
         "precio":             22.50,

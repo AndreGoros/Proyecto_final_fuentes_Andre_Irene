@@ -7,11 +7,11 @@ Este proyecto es una solución tecnológica diseñada para ayudar a los usuarios
 ## 🚀 Estado Actual del Proyecto
 
 Actualmente, el proyecto es **100% funcional de extremo a extremo (End-to-End)**, contando con las siguientes piezas:
-1. **Limpieza e Ingesta de Datos (Inteligente):** El sistema procesa CSVs masivos de PROFECO aplicando correcciones automáticas de encoding y combinando producto + presentación + marca para crear un **Índice de Texto** de búsqueda flexible.
-2. **Infraestructura:** MongoDB en Docker con índices espaciales (`2dsphere`) y un **Text Index** optimizado para español que permite encontrar productos incluso con ligeros errores de escritura.
-3. **API Backend:** Servidor FastAPI con **Cerebro de Corrección (Gemini)**. Antes de buscar en la DB, el sistema usa IA para normalizar typos (ej: "gitomate" -> "jitomate") y extraer cantidades.
-4. **Frontend:** Interfaz interactiva (Dark Mode) con desglose detallado, incluyendo distancias reales y cálculo de gasolina.
-5. **CI/CD y Testing:** Pipeline automatizado con GitHub Actions y pruebas unitarias con `Pytest`.
+1. **Optimización de Almacenamiento (Massive Data Reduction):** El sistema aplica **Deduplicación por Sucursal**, conservando solo el precio más reciente por producto en cada tienda física. Esto reduce el volumen de datos en un **71%**, permitiendo que millones de registros quepan en el plan gratuito de MongoDB Atlas (M0).
+2. **Infraestructura Cloud-Ready:** Preparado para **Google Cloud Run** con un `Dockerfile` multi-stage optimizado (~200MB) y scripts de despliegue automatizados.
+3. **MongoDB Atlas Nativo:** Soporte integrado para clústeres en la nube con gestión inteligente de pool de conexiones y timeouts de producción.
+4. **PWA (Progressive Web App):** La interfaz ahora es instalable en dispositivos móviles y cuenta con **Service Workers** para soporte offline y carga instantánea.
+5. **IA de Alto Rendimiento:** Actualizado a `gemini-flash-latest` para maximizar la velocidad de respuesta y las cuotas de uso gratuito.
 
 ---
 
@@ -37,10 +37,10 @@ Este proyecto hace uso de tecnologías modernas para asegurar rendimiento, escal
 * **Diseño Premium**: Interfaz moderna aplicando tendencias de diseño como *Glassmorphism*, transiciones suaves y modo oscuro (*Dark Mode*) nativo.
 
 ### DevOps, Pruebas e Infraestructura
-* **Docker & Docker Compose**: Contenerización de la base de datos (y su panel Mongo-Express) para garantizar un entorno determinista de desarrollo.
-* **GitHub Actions**: Pipeline de Integración Continua (CI) que valida la integridad del código y ejecuta las pruebas automáticas.
-* **Pytest**: Framework utilizado para diseñar pruebas unitarias automatizadas que protegen la lógica de los endpoints y los scripts de limpieza.
-* **Ngrok**: Túnel reverso automatizado en el proyecto para poder exponer el servidor local a internet y probar la aplicación en dispositivos móviles fácilmente.
+* **Docker & Google Cloud Run**: Contenerización profesional con imágenes ligeras listas para despliegue serverless.
+* **MongoDB Atlas**: Base de datos en la nube con escalado elástico.
+* **GitHub Actions**: Pipeline de Integración Continua (CI) que valida la integridad del código.
+* **PWA (Service Workers & Manifest)**: Tecnología que permite que la web funcione como una app nativa, con caché inteligente y acceso rápido desde el inicio.
 
 ---
 
@@ -48,34 +48,27 @@ Este proyecto hace uso de tecnologías modernas para asegurar rendimiento, escal
 
 El proyecto ha sido rediseñado utilizando arquitectura de microservicios y una estricta separación por responsabilidades.
 
-### 🌳 Árbol de Arquitectura (Niveles)
+### 🌳 Árbol de Arquitectura
 ```text
 📦 Proyecto_final_fuentes_Andre_Irene
- ┣ 📂 .github/workflows/     # 🤖 Nivel 5: Integración Continua (CI/CD)
- ┃ ┗ 📜 ci.yml               #   Pipeline automatizado de GitHub Actions
- ┣ 📂 backend/               # 🧠 Nivel 2: Lógica de Negocio y API
- ┃ ┣ 📜 main.py              #   Endpoints principales (FastAPI)
- ┃ ┣ 📜 database.py          #   Conexión asíncrona a MongoDB
- ┃ ┣ 📜 schemas.py           #   Validación estricta de datos (Pydantic)
- ┃ ┣ 📂 services/            #   Lógica pesada
- ┃ ┃ ┣ 📜 gemini_service.py  #     Conexión con IA (Google Gemini Vision)
- ┃ ┃ ┗ 📜 query_service.py   #     Matemáticas, deducción de faltantes y $geoNear
- ┃ ┗ 📜 requirements.txt     #   Dependencias del servidor
- ┣ 📂 frontend/              # 🎨 Nivel 1: Interfaz Gráfica del Usuario (UI)
- ┃ ┣ 📜 index.html           #   Estructura de la aplicación
- ┃ ┣ 📜 styles.css           #   Estilos Premium (Dark Mode & Glassmorphism)
- ┃ ┗ 📜 app.js               #   Lógica de interacción y llamadas a la API
- ┣ 📂 data_pipeline/         # ⚙️ Nivel 3: Ingesta y Limpieza de Datos (ETL)
- ┃ ┣ 📜 limpieza.py          #   Core de limpieza (Upserts sin duplicados)
- ┃ ┣ 📜 pipeline_limpieza.py #   Interfaz de comandos (CLI)
- ┃ ┗ 📜 requirements.txt     #   Dependencias de procesamiento (Pandas, PyMongo)
- ┣ 📂 tests/                 # 🧪 Pruebas Unitarias Automatizadas
- ┃ ┣ 📜 test_api.py          #   Validación del backend y endpoints
- ┃ ┗ 📜 test_limpieza.py     #   Validación del algoritmo de Pandas
-  ┣ 📂 scratch/               # 🧪 Laboratorio: Scripts de prueba y validación
- ┣ 📂 mongo-init/            # 🗄️ Nivel 4: Infraestructura de Base de Datos
- ┃ ┗ 📜 01_init.js           #   Inicialización de Mongo e índices 2dsphere
- ┣ 📂 Datos/                 # 📥 Origen de Datos (Aquí van los CSVs de PROFECO)
+ ┣ 📂 backend/               # 🧠 Backend (FastAPI)
+ ┃ ┣ 📜 main.py              #   Endpoints y Servidor Estático
+ ┃ ┣ 📜 database.py          #   Conexión Atlas/Local (Pool optimizado)
+ ┃ ┗ 📂 services/            #   IA y Lógica Geoespacial
+ ┣ 📂 frontend/              # 🎨 Frontend (PWA)
+ ┃ ┣ 📜 index.html           #   UI con Snippet de PWA
+ ┃ ┣ 📜 manifest.json        #   Configuración de App Móvil
+ ┃ ┗ 📜 service-worker.js    #   Caché Offline y Performance
+ ┣ 📂 data_pipeline/         # ⚙️ Pipeline ETL (Pandas)
+ ┃ ┗ 📜 limpieza.py          #   Deduplicación y Saneo de Encoding
+ ┣ 📂 Datos/                 # 📥 CSVs de PROFECO
+ ┣ 📂 scratch/               # 🧪 Laboratorio de Pruebas
+ ┣ 📜 Dockerfile             # 🐳 Imagen Multi-stage para Producción
+ ┣ 📜 deploy.sh              # 🚀 Script de despliegue a Cloud Run
+ ┣ 📜 migrate_to_atlas.sh    # 🗺️ Guía de migración a la nube
+ ┣ 📜 docker-compose.yml     # 🐳 Entorno local de Desarrollo
+ ┗ 📜 .env.example           # 🔑 Plantilla de variables Atlas/Cloud
+ van los CSVs de PROFECO)
  ┣ 📜 start.py               # 🚀 Orquestador General (Levanta API + Túnel ngrok)
  ┣ 📜 docker-compose.yml     # 🐳 Definición de contenedores (Mongo + Mongo-Express)
  ┗ 📜 .env.example           # 🔑 Plantilla de credenciales y variables de entorno
@@ -184,36 +177,75 @@ El sistema divide los resultados en dos categorías para una mejor decisión de 
 
 ---
 
-## 🛠️ Cómo correr el sistema completo (Local-First)
+## 💻 Guía de Inicio (Local)
 
-1. **Configura tu entorno:**
-   Copia la plantilla de variables de entorno y agrega tu API Key de Gemini:
-   ```bash
-   cp .env.example .env
-   ```
+Sigue estos pasos para correr el sistema en tu computadora de forma unificada (Frontend + Backend):
 
-2. **Enciende el motor de Base de Datos:**
-   ```bash
-   docker-compose up -d
-   ```
+### 1. Configuración de Entorno
+Crea tu entorno virtual e instala las dependencias:
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r backend/requirements.txt
+pip install -r data_pipeline/requirements.txt
+```
 
-3. **Carga los datos reales:**
-   - Descarga un archivo `.csv` de PROFECO y mételo dentro de la carpeta `Datos/`.
-   - Crea un entorno virtual, actívalo y procesa los datos:
-     ```bash
-     python3 -m venv .venv
-     source .venv/bin/activate
-     pip install -r data_pipeline/requirements.txt
-     python data_pipeline/pipeline_limpieza.py
-     ```
+### 2. Variables de Entorno
+Copia la plantilla y configura tu `GEMINI_API_KEY` y tu `MONGO_URI`:
+```bash
+cp .env.example .env
+```
 
-4. **Arranca tu Servidor y el Frontend:**
-   - En la misma terminal (asegúrate de que el `.venv` siga activado), instala las dependencias del servidor y córrelo:
-   ```bash
-   pip install -r backend/requirements.txt
-   python start.py
-   ```
-   *(Abre tu navegador en `http://localhost:8000/` para utilizar la interfaz visual. Además, en tu terminal verás una URL pública generada por ngrok con la que puedes usar la aplicación desde tu teléfono)*.
+### 3. Procesamiento de Datos (PROFECO)
+Coloca tus archivos CSV en la carpeta `Datos/` y corre el pipeline de limpieza (ahora con deduplicación automática):
+```bash
+# Este comando limpia los datos (71% de ahorro) y los sube a Mongo
+python data_pipeline/limpieza.py
+```
+
+### 4. Ejecución Unificada
+Ya no necesitas arrancar el frontend por separado. El backend sirve todo en el puerto 8080:
+```bash
+cd backend
+uvicorn main:app --port 8080 --reload
+```
+Accede a: **`http://localhost:8080`**
+
+---
+
+## 🚀 Despliegue a Producción (Railway + Cloudflare Pages)
+
+El proyecto cuenta con una arquitectura de alta velocidad y cero latencia, separando el Frontend en la red global de Cloudflare Pages y el Backend en Railway.
+
+1. **Migrar a Atlas:**
+   Sube tus datos locales a un clúster gratuito de MongoDB Atlas (puedes usar el script `migrate_to_atlas.sh` como referencia) y asegúrate de permitir conexiones desde cualquier IP (`0.0.0.0/0`) en la pestaña *Network Access* de Atlas.
+
+2. **Backend (Railway):**
+   * Conecta tu repositorio de GitHub a [Railway](https://railway.app/).
+   * **Importante (Configuración de Directorio):** En la configuración del servicio dentro de la interfaz web de Railway, establece el **Root Directory** a `/backend`.
+   * Railway detectará automáticamente el archivo `backend/railway.toml` e instalará las dependencias.
+   * En los *Variables* de tu servicio FastAPI en Railway, agrega:
+     * `MONGO_URI`: Tu cadena de conexión a Atlas.
+     * `GEMINI_API_KEY`: Tu llave de Google Gemini.
+     * `ALLOWED_ORIGINS`: La URL de tu Frontend (ej. `https://supermarket-comparison.pages.dev`).
+
+3. **Frontend (Cloudflare Pages):**
+   * Conecta tu repositorio de GitHub a [Cloudflare Pages](https://pages.cloudflare.com/).
+   * Configura las opciones de compilación:
+     * **Framework preset**: `None`
+     * **Root directory (advanced)**: `frontend`
+     * **Build command**: (Dejar vacío)
+     * **Build output directory**: (Dejar vacío)
+   * ¡Listo! El frontend se comunicará directamente con tu servidor de Railway de forma súper rápida y segura mediante CORS.
+
+---
+
+## 📱 Funcionalidades PWA
+
+Gracias a la integración de PWA, puedes usar la app de forma profesional:
+* **Instalación:** En Chrome (Android/PC) o Safari (iOS), selecciona "Instalar" o "Agregar a inicio" para tener el icono en tu pantalla.
+* **Modo Offline:** El Service Worker cachea la interfaz para que cargue instantáneamente incluso sin conexión.
+* **Unificación:** El backend sirve tanto la API como el frontend, simplificando el despliegue.
 > [!TIP]
 > **Precisión en la búsqueda:** El sistema busca siempre la opción más económica. Para productos que puedan confundirse con frutas (ej: "miel" puede coincidir con "piña miel"), se recomienda ser específico escribiendo **"miel de abeja"**.
 ---

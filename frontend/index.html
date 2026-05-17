@@ -7,6 +7,15 @@
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#00d4aa" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="CanastaAI" />
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
 </head>
 <body>
     <div class="background-blobs">
@@ -20,52 +29,64 @@
             <p>Encuentra el súper más barato, considerando tu viaje</p>
         </header>
 
-        <main class="glass-panel">
-            <div class="location-section">
-                <button id="btn-location" class="btn-secondary">
-                    <i class="fa-solid fa-location-crosshairs"></i> Obtener mi ubicación
+        <div class="app-layout">
+            <main class="glass-panel input-section">
+                <div class="location-section">
+                    <button id="btn-location" class="btn-secondary">
+                        <i class="fa-solid fa-location-crosshairs"></i> Obtener mi ubicación
+                    </button>
+                    <span id="location-status" class="status-text">📍 Ubicación pendiente...</span>
+                </div>
+
+                <div class="tabs">
+                    <button class="tab-btn active" data-target="tab-texto"><i class="fa-solid fa-pen-to-square"></i> Escribir Lista</button>
+                    <button class="tab-btn" data-target="tab-foto"><i class="fa-solid fa-camera"></i> Subir Foto</button>
+                </div>
+
+                <div class="tab-content active" id="tab-texto">
+                    <p class="instruction">Escribe los productos separados por comas:</p>
+                    <textarea id="lista-texto" placeholder="Ej. leche lala deslactosada 1l, pan bimbo blanco, huevo san juan 18 piezas..."></textarea>
+                    <div class="search-tip">
+                        <i class="fa-solid fa-circle-info"></i>
+                        <span>Si no especificas marca, buscaremos el más barato. Sin unidad, se asume 1 (pza/kg/lt).</span>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="tab-foto">
+                    <p class="instruction">Sube una foto de tu lista de compras del refri:</p>
+                    <div class="file-upload">
+                        <input type="file" id="foto-input" accept="image/*" hidden>
+                        <label for="foto-input" class="upload-area">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                            <span>Haz clic o arrastra tu foto aquí</span>
+                        </label>
+                        <p id="file-name" class="file-name"></p>
+                    </div>
+                </div>
+
+                <button id="btn-calcular" class="btn-primary">
+                    <i class="fa-solid fa-calculator"></i> Calcular Mejor Opción
                 </button>
-                <span id="location-status" class="status-text">📍 Ubicación pendiente...</span>
-            </div>
+            </main>
 
-            <div class="tabs">
-                <button class="tab-btn active" data-target="tab-texto"><i class="fa-solid fa-pen-to-square"></i> Escribir Lista</button>
-                <button class="tab-btn" data-target="tab-foto"><i class="fa-solid fa-camera"></i> Subir Foto</button>
-            </div>
-
-            <div class="tab-content active" id="tab-texto">
-                <p class="instruction">Escribe los productos separados por comas:</p>
-                <textarea id="lista-texto" placeholder="Ej. leche lala deslactosada 1l, pan bimbo blanco, huevo san juan 18 piezas..."></textarea>
-                <div class="search-tip">
-                    <i class="fa-solid fa-circle-info"></i>
-                    <span>Si no especificas marca, buscaremos el más barato. Sin unidad, se asume 1 (pza/kg/lt).</span>
+            <section id="results-section" class="results-section hidden">
+                <h2>Resultados</h2>
+                <div id="results-container" class="results-grid">
+                    <!-- Cards generadas por JS -->
                 </div>
-            </div>
-
-            <div class="tab-content" id="tab-foto">
-                <p class="instruction">Sube una foto de tu lista de compras del refri:</p>
-                <div class="file-upload">
-                    <input type="file" id="foto-input" accept="image/*" hidden>
-                    <label for="foto-input" class="upload-area">
-                        <i class="fa-solid fa-cloud-arrow-up"></i>
-                        <span>Haz clic o arrastra tu foto aquí</span>
-                    </label>
-                    <p id="file-name" class="file-name"></p>
-                </div>
-            </div>
-
-            <button id="btn-calcular" class="btn-primary">
-                <i class="fa-solid fa-calculator"></i> Calcular Mejor Opción
-            </button>
-        </main>
-
-        <section id="results-section" class="results-section hidden">
-            <h2>🏆 Resultados</h2>
-            <div id="results-container" class="results-grid">
-                <!-- Cards generadas por JS -->
-            </div>
-        </section>
+            </section>
+        </div>
         
+        <!-- Modal for Zoomed Result -->
+        <div id="modal-overlay" class="modal-overlay hidden">
+            <div class="modal-content glass-panel">
+                <button id="close-modal" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+                <div id="modal-body">
+                    <!-- Contenido dinámico -->
+                </div>
+            </div>
+        </div>
+
         <!-- Loading -->
         <div id="loading-overlay" class="hidden">
             <div class="spinner"></div>
@@ -74,5 +95,31 @@
     </div>
 
     <script src="app.js"></script>
+    
+    <!-- Service Worker para PWA -->
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", async () => {
+          try {
+            const registration = await navigator.serviceWorker.register(
+              "/service-worker.js",
+              { scope: "/" }
+            );
+            console.log("✅ Service Worker registrado:", registration.scope);
+    
+            registration.addEventListener("updatefound", () => {
+              const newWorker = registration.installing;
+              newWorker.addEventListener("statechange", () => {
+                if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+                  console.log("🔄 Nueva versión disponible. Recarga para actualizar.");
+                }
+              });
+            });
+          } catch (err) {
+            console.warn("Service Worker no disponible:", err);
+          }
+        });
+      }
+    </script>
 </body>
 </html>

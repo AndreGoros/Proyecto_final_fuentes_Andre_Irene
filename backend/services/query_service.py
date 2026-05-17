@@ -44,6 +44,31 @@ SINONIMOS_BUSQUEDA = {
     "uno": "1"
 }
 
+# Exclusiones contextuales: si el usuario busca la palabra clave (izq),
+# excluir resultados cuyo nombre_simplificado contenga alguna de las subcadenas (der).
+# Evita que "crema" retorne "crema dental" o "crema nair".
+EXCLUSIONES_CONTEXTUALES = {
+    "crema":    ["dental", "depilacion", "nair", "aciclovir", "canesten", "hidratante bebe", "avellana", "cacao"],
+    "sal":      ["salchicha", "salsa", "salami", "salmon", "salvia"],
+    "manzana":  ["vinagre"],
+    "mango":    ["jugo", "boing", "nectar"],
+    "limon":    ["limonada", "refresco"],
+    "naranja":  ["jugo", "refresco", "nectar"],
+    "uva":      ["jugo", "refresco"],
+    "leche":    ["chocolate con leche"],   # Mantener, no excluir en general
+    "agua":     ["aguardiente", "aguacate"],
+}
+
+# Frutas y verduras que se venden por kg/pieza — el campo 'producto' es más preciso
+FRUTAS_VERDURAS = {
+    "mango", "manzana", "naranja", "platano", "sandia", "melon", "papaya",
+    "pera", "uva", "fresa", "limon", "toronja", "mandarina", "kiwi",
+    "jitomate", "tomate", "cebolla", "papa", "zanahoria", "pepino",
+    "calabaza", "brocoli", "lechuga", "espinaca", "chile", "aguacate",
+    "verdolaga", "cilantro", "perejil", "apio", "betabel", "nopal",
+}
+
+
 def parse_product_string(prod_str: str):
     """
     Extrae cantidad y normaliza unidades (ej: 500gr -> 0.5kg).
@@ -124,7 +149,7 @@ async def optimizar_carrito(latitud: float, longitud: float, productos: List[str
             "$group": {
                 "_id": "$location.coordinates",              # Coordenada exacta = Sucursal única
                 "cadena":       {"$first": "$cadena"},
-                "sucursal":     {"$first": "$cadena_raw"},
+                "sucursal":     {"$first": "$cadena"},       # Usamos el nombre normalizado
                 "direccion":    {"$first": "$direccion"},
                 "distancia_mts":{"$first": "$distancia"},
             }
@@ -149,63 +174,48 @@ async def optimizar_carrito(latitud: float, longitud: float, productos: List[str
 
         for prod_original in productos:
             cantidad, termino_busqueda = parse_product_string(prod_original)
-            
-            # Regex: todas las palabras del término de búsqueda deben aparecer
-            palabras_query = [p for p in termino_busqueda.lower().split() if len(p) > 1]
+
+            # Palabras clave: al menos 3 letras, sin stopwords
+            palabras_query = [p for p in termino_busqueda.lower().split() if len(p) >= 3]
             if not palabras_query:
-                # Caso borde: si el string es muy corto, usarlo tal cual
                 palabras_query = [termino_busqueda.lower()]
-                
-            # Flexibilidad fonética para errores comunes en español (g/j, s/z/c, b/v, h muda)
-            palabras_flex = []
+
+            # Construir regex simple: cada palabra debe estar presente
+            lookaheads = []
             for p in palabras_query:
-                f = p.lower()
-                
-                # Manejo de plurales: si termina en 's', hacerla opcional
-                if f.endswith("s") and len(f) > 3:
-                    f = f[:-1] + "s?"
-                
-                # Reemplazos con placeholders para evitar anidamiento
-                f = f.replace("b", "B").replace("v", "B")
-                f = f.replace("g", "G").replace("j", "G")
-                f = f.replace("s", "S").replace("z", "S").replace("c", "S")
-                
-                # Reemplazo final de placeholders
-                f = f.replace("B", "[bv]").replace("G", "[gj]").replace("S", "[szc]")
-                
-                # r/rr
-                f = f.replace("rr", "r").replace("r", "r+")
-                
-                # Hack para palabras juntas (ej: piñamiel -> piña.*miel)
-                # Si la palabra es larga y contiene "miel", "pavo", "lala", etc., insertar .*
-                for together in ["miel", "pavo", "lala", "blanco", "negro"]:
-                    if together in f and f != together:
-                        f = f.replace(together, f".*{together}")
+                raiz = p[:-1] if (p.endswith("s") and len(p) > 3) else p
+                lookaheads.append(f"(?=.*{re.escape(raiz)})")
 
-                # h opcional solo si no empieza con un grupo o clase
-                if not f.startswith("["):
-                    f = "h?" + f
-                
-                palabras_flex.append(f)
+            # Exclusiones contextuales: evitar falsos positivos (ej: "crema" != "crema dental")
+            # PERO solo si el usuario NO pidió explícitamente ese término
+            # Ej: "crema dental" -> la palabra "dental" está en la query, NO excluir
+            exclusiones = []
+            for p in palabras_query:
+                for excluido in EXCLUSIONES_CONTEXTUALES.get(p, []):
+                    # Solo excluir si el término excluido NO forma parte de lo que el usuario pidió
+                    if excluido not in termino_busqueda.lower():
+                        exclusiones.append(f"(?!.*{re.escape(excluido)})")
 
-            # Evitar distractores comunes si no fueron pedidos explícitamente (ej. evitar 'harina de arroz' si pidió 'arroz')
-            distractores = ["harina", "bebida", "polvo", "galletas"]
-            avoid_regex = "".join([f"(?!.*{d})" for d in distractores if d not in termino_busqueda.lower()])
-            
-            regex_pattern = avoid_regex + "".join([f"(?=.*{p})" for p in palabras_flex]) + ".*"
+
+            regex_pattern = "".join(exclusiones) + "".join(lookaheads) + ".*"
             print(f"  DEBUG: Buscando '{prod_original}' -> Term: '{termino_busqueda}' -> Regex: '{regex_pattern}'")
+
+            # Para frutas y verduras, buscar por campo 'producto' (más preciso que nombre_simplificado)
+            es_fruta_verdura = any(p in FRUTAS_VERDURAS for p in palabras_query)
+            campo_busqueda = "producto" if es_fruta_verdura else "nombre_simplificado"
 
             # ── Filtro por coordenada física + producto ─────────
             item = await db.precios.find_one(
                 {
                     "location.coordinates": suc["_id"],
-                    "nombre_simplificado": {
+                    campo_busqueda: {
                         "$regex": regex_pattern,
                         "$options": "i",
                     },
                 },
                 sort=[("precio", 1)],
             )
+
             
             if item:
                 print(f"    DEBUG: [OK] Encontrado en {suc['cadena']}: {item['producto']} (${item['precio']})")
