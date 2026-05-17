@@ -8,7 +8,7 @@
 
 # Las llamadas a /api/* van al backend de Railway
 # IMPORTANTE: reemplaza la URL por la tuya cuando Railway te la dé
-/api/*  https://tu-app.up.railway.app/api/:splat  200
+/api/*  https://proyectofinalfuentesandreirene-production.up.railway.app/api/:splat  200
 
 # Todo lo demás sirve el frontend
 /*      /index.html     200
